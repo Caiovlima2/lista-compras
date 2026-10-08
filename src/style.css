@@ -1,0 +1,12 @@
+body {
+  background-color: var(--bs-tertiary-bg);
+}
+
+.app-container {
+  max-width: 720px;
+  margin-inline: auto;
+}
+
+.previa {
+  min-height: 1.5rem;
+}

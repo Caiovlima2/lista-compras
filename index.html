@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lista de Compras</title>
+  </head>
+  <body>
+    <main class="app-container px-3 py-4">
+      <h1 class="h3 mb-4 text-center">🛒 Lista de Compras</h1>
+
+      <section class="card shadow-sm mb-4">
+        <div class="card-body">
+          <form id="form-item" class="row g-2">
+            <div class="col-12 col-sm-6">
+              <label for="nome" class="form-label small mb-1">Item</label>
+              <input
+                type="text"
+                id="nome"
+                name="nome"
+                class="form-control"
+                placeholder="Ex.: Arroz"
+                required
+              />
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <label for="marca" class="form-label small mb-1">Marca</label>
+              <input
+                type="text"
+                id="marca"
+                name="marca"
+                class="form-control"
+                placeholder="Ex.: Tio João"
+              />
+            </div>
+
+            <div class="col-6 col-sm-4">
+              <label for="preco" class="form-label small mb-1"
+                >Preço (unidade)</label
+              >
+              <div class="input-group">
+                <span class="input-group-text">R$</span>
+                <input
+                  type="number"
+                  id="preco"
+                  name="preco"
+                  class="form-control"
+                  step="0.01"
+                  min="0"
+                  inputmode="decimal"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="col-6 col-sm-3">
+              <label for="quantidade" class="form-label small mb-1"
+                >Quantidade</label
+              >
+              <input
+                type="number"
+                id="quantidade"
+                name="quantidade"
+                class="form-control"
+                value="1"
+                min="1"
+                step="1"
+                inputmode="numeric"
+              />
+            </div>
+
+            <div class="col-12 col-sm-5">
+              <label for="peso" class="form-label small mb-1"
+                >Peso / volume (opcional)</label
+              >
+              <div class="input-group">
+                <input
+                  type="number"
+                  id="peso"
+                  name="peso"
+                  class="form-control"
+                  step="any"
+                  min="0"
+                  inputmode="decimal"
+                />
+                <select
+                  id="unidade"
+                  name="unidade"
+                  class="form-select flex-grow-0 w-auto"
+                  aria-label="Unidade"
+                ></select>
+              </div>
+            </div>
+
+            <div class="col-12">
+              <output
+                name="previa"
+                class="previa d-block text-success fw-semibold"
+              ></output>
+            </div>
+
+            <div class="col-12 d-grid">
+              <button type="submit" class="btn btn-primary">
+                Adicionar à lista
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="card shadow-sm mb-4">
+        <div
+          class="card-header d-flex justify-content-between align-items-center"
+        >
+          <span class="fw-semibold">Lista atual</span>
+          <button
+            type="button"
+            class="btn btn-outline-primary btn-sm"
+            data-bs-toggle="modal"
+            data-bs-target="#modal-reaproveitar"
+          >
+            ♻️ Usar lista anterior
+          </button>
+        </div>
+        <ul id="lista" class="list-group list-group-flush"></ul>
+        <div
+          class="card-footer d-flex justify-content-between align-items-center"
+        >
+          <strong id="total"></strong>
+          <button
+            id="salvar-lista"
+            type="button"
+            class="btn btn-success btn-sm"
+          >
+            💾 Salvar no histórico
+          </button>
+        </div>
+      </section>
+
+      <section class="mb-4">
+        <h2 class="h5">📅 Comparativo mensal</h2>
+        <ul id="comparativo" class="list-group"></ul>
+      </section>
+
+      <section>
+        <h2 class="h5">🗂️ Listas salvas</h2>
+        <div id="historico" class="accordion"></div>
+      </section>
+    </main>
+
+    <div
+      class="modal fade"
+      id="modal-reaproveitar"
+      tabindex="-1"
+      aria-labelledby="titulo-reaproveitar"
+      aria-hidden="true"
+    >
+      <div
+        class="modal-dialog modal-dialog-scrollable modal-fullscreen-sm-down"
+      >
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2 class="modal-title h5" id="titulo-reaproveitar">
+              Usar lista anterior
+            </h2>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Fechar"
+            ></button>
+          </div>
+
+          <div class="modal-body">
+            <p id="reaproveitar-vazio" class="text-body-secondary mb-0 d-none">
+              Você ainda não salvou nenhuma lista no histórico.
+            </p>
+
+            <div id="reaproveitar-conteudo">
+              <label for="reaproveitar-origem" class="form-label small mb-1"
+                >Lista de origem</label
+              >
+              <select
+                id="reaproveitar-origem"
+                class="form-select mb-3"
+              ></select>
+
+              <div class="form-check mb-2">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  id="reaproveitar-todos"
+                />
+                <label class="form-check-label" for="reaproveitar-todos"
+                  >Selecionar todos</label
+                >
+              </div>
+
+              <ul id="reaproveitar-itens" class="list-group"></ul>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-outline-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              id="reaproveitar-confirmar"
+              class="btn btn-primary"
+              data-bs-dismiss="modal"
+              disabled
+            >
+              Adicionar à lista
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
