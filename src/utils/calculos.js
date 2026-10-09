@@ -3,6 +3,8 @@ const CONVERSOES = {
   kg: { divisor: 1, rotulo: 'kg' },
   ml: { divisor: 1000, rotulo: 'L' },
   L: { divisor: 1, rotulo: 'L' },
+  // Produtos vendidos em pacote com várias unidades (ex.: papel higiênico, 12 un)
+  un: { divisor: 1, rotulo: 'un' },
 };
 
 export const UNIDADES = Object.keys(CONVERSOES);

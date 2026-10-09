@@ -15,7 +15,7 @@ function criarDetalhe(item) {
   const partes = [formatarPesoItem(item)];
   const base = calcularPrecoBaseDoItem(item);
   if (base) partes.push(formatarPrecoBase(base));
-  partes.push(`${formatarQuantidade(item.compra?.quantidade ?? item.quantidade)} un`);
+  partes.push(`${formatarQuantidade(item.compra?.quantidade ?? item.quantidade)}×`);
   return partes.filter(Boolean).join(' · ');
 }
 

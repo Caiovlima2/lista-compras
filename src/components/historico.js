@@ -10,7 +10,7 @@ import {
 import { ordenarRegistrosRecentes } from '../domain/historico.js';
 
 function criarLinhaSalva(item) {
-  const detalhe = [formatarPesoItem(item), `${formatarQuantidade(item.quantidade)} un`].filter(Boolean).join(' · ');
+  const detalhe = [formatarPesoItem(item), `${formatarQuantidade(item.quantidade)}×`].filter(Boolean).join(' · ');
   return criarElemento(
     'li',
     { classe: 'flex items-center justify-between gap-3 py-2' },
