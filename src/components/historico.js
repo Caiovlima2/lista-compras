@@ -1,75 +1,108 @@
-import { criarElemento } from '../utils/dom.js';
-import { formatarData, formatarPreco, formatarQuantidade } from '../utils/formatadores.js';
-import { criarLinhaItem } from './itemLinha.js';
+import { criarElemento, icone } from '../utils/dom.js';
+import {
+  formatarData,
+  formatarHora,
+  formatarPesoItem,
+  formatarPreco,
+  formatarQuantidade,
+  formatarTituloItem,
+} from '../utils/formatadores.js';
+import { ordenarRegistrosRecentes } from '../domain/historico.js';
 
-export function renderHistorico(container, registros, { aoExcluir }) {
+function criarLinhaSalva(item) {
+  const detalhe = [formatarPesoItem(item), `${formatarQuantidade(item.quantidade)} un`].filter(Boolean).join(' · ');
+  return criarElemento(
+    'li',
+    { classe: 'flex items-center justify-between gap-3 py-2' },
+    criarElemento(
+      'div',
+      { classe: 'min-w-0' },
+      criarElemento('p', { classe: 'truncate text-body-md', texto: formatarTituloItem(item) }),
+      criarElemento('p', { classe: 'text-body-sm text-on-surface-variant', texto: detalhe }),
+    ),
+    criarElemento('p', { classe: 'text-label-lg', texto: formatarPreco(item.preco * item.quantidade) }),
+  );
+}
+
+function criarRegistro(registro, { aoCopiar, aoExcluir }) {
+  const titulo = registro.mercado || 'Compra sem local';
+  const quando = `${formatarData(registro.data)} · ${formatarHora(registro.data)}`;
+
+  return criarElemento(
+    'details',
+    { classe: 'card group' },
+    criarElemento(
+      'summary',
+      { classe: 'flex cursor-pointer list-none items-center justify-between gap-3 p-4' },
+      criarElemento(
+        'div',
+        { classe: 'min-w-0' },
+        criarElemento('p', { classe: 'truncate text-body-lg', texto: titulo }),
+        criarElemento('p', {
+          classe: 'text-body-sm text-on-surface-variant',
+          texto: `${quando} · ${registro.itens.length} ${registro.itens.length === 1 ? 'item' : 'itens'}`,
+        }),
+      ),
+      criarElemento(
+        'div',
+        { classe: 'flex shrink-0 items-center gap-2' },
+        criarElemento('p', { classe: 'text-headline-sm', texto: formatarPreco(registro.total) }),
+        icone('expand_more', 'transition group-open:rotate-180'),
+      ),
+    ),
+    criarElemento(
+      'div',
+      { classe: 'border-t border-outline-variant px-4 pb-4' },
+      registro.economia > 0
+        ? criarElemento(
+            'p',
+            { classe: 'pt-3' },
+            criarElemento('span', { classe: 'badge-bom' }, icone('savings', 'text-base'), `Economia ${formatarPreco(registro.economia)}`),
+          )
+        : null,
+      criarElemento('ul', { classe: 'divide-y divide-outline-variant' }, ...registro.itens.map(criarLinhaSalva)),
+      criarElemento(
+        'div',
+        { classe: 'flex gap-2 pt-3' },
+        criarElemento(
+          'button',
+          { classe: 'btn btn-tonal flex-1', atributos: { type: 'button' }, aoClicar: aoCopiar },
+          icone('content_copy'),
+          'Copiar lista',
+        ),
+        criarElemento(
+          'button',
+          {
+            classe: 'btn btn-ghost size-12 min-h-0 p-0 text-error',
+            atributos: { type: 'button', 'aria-label': 'Excluir lista salva' },
+            aoClicar: aoExcluir,
+          },
+          icone('delete'),
+        ),
+      ),
+    ),
+  );
+}
+
+export function renderizarHistorico(container, contador, registros, acoes) {
+  contador.textContent = `${registros.length} ${registros.length === 1 ? 'compra registrada' : 'compras registradas'}`;
+
   if (registros.length === 0) {
     container.replaceChildren(
       criarElemento('p', {
-        classe: 'text-body-secondary mb-0',
-        texto: 'Nenhuma lista salva ainda.',
+        classe: 'rounded-lg border border-dashed border-outline-variant p-6 text-center text-on-surface-variant',
+        texto: 'Nenhuma compra salva ainda.',
       }),
     );
     return;
   }
 
-  const maisRecentesPrimeiro = [...registros].sort((a, b) => b.data.localeCompare(a.data));
-
   container.replaceChildren(
-    ...maisRecentesPrimeiro.map((registro) => criarRegistro(registro, container.id, aoExcluir)),
-  );
-}
-
-function criarRegistro(registro, idDoContainer, aoExcluir) {
-  const idDoCorpo = `lista-salva-${registro.id}`;
-  const resumo = [
-    formatarData(registro.data),
-    formatarQuantidade(registro.itens.length),
-    formatarPreco(registro.total),
-  ].join(' — ');
-
-  const cabecalho = criarElemento(
-    'h3',
-    { classe: 'accordion-header' },
-    criarElemento('button', {
-      classe: 'accordion-button collapsed',
-      texto: resumo,
-      atributos: {
-        type: 'button',
-        'data-bs-toggle': 'collapse',
-        'data-bs-target': `#${idDoCorpo}`,
-        'aria-expanded': 'false',
-        'aria-controls': idDoCorpo,
-      },
-    }),
-  );
-
-  const itens = criarElemento(
-    'ul',
-    { classe: 'list-group list-group-flush' },
-    ...registro.itens.map((item) => criarLinhaItem(item)),
-  );
-
-  const botaoExcluir = criarElemento('button', {
-    classe: 'btn btn-outline-danger btn-sm',
-    texto: 'Excluir lista',
-    atributos: { type: 'button' },
-    aoClicar: () => aoExcluir(registro.id),
-  });
-
-  const corpo = criarElemento(
-    'div',
-    {
-      classe: 'accordion-collapse collapse',
-      atributos: { id: idDoCorpo, 'data-bs-parent': `#${idDoContainer}` },
-    },
-    criarElemento(
-      'div',
-      { classe: 'accordion-body p-0' },
-      itens,
-      criarElemento('div', { classe: 'p-3' }, botaoExcluir),
+    ...ordenarRegistrosRecentes(registros).map((registro) =>
+      criarRegistro(registro, {
+        aoCopiar: () => acoes.copiar(registro.id),
+        aoExcluir: () => acoes.excluir(registro.id),
+      }),
     ),
   );
-
-  return criarElemento('div', { classe: 'accordion-item' }, cabecalho, corpo);
 }

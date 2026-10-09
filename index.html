@@ -4,224 +4,215 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Lista de Compras</title>
+    <link rel="icon" href="data:," />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Material+Symbols+Outlined:wght@400..600&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Aplica o tema antes de renderizar para evitar "piscar" branco.
+         A lógica completa vive em src/services/storage.js e src/components/temaToggle.js -->
+    <script>
+      try {
+        const salvo = JSON.parse(localStorage.getItem('lista-compras-tema'));
+        const escuro = salvo ? salvo === 'escuro' : matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.classList.toggle('dark', escuro);
+      } catch {
+        /* sem localStorage: segue o tema claro */
+      }
+    </script>
   </head>
-  <body>
-    <main class="app-container px-3 py-4">
-      <h1 class="h3 mb-4 text-center">🛒 Lista de Compras</h1>
+  <body class="min-h-dvh bg-surface font-sans text-body-md">
+    <!-- Topo -->
+    <header class="sticky top-0 z-30 border-b border-outline-variant bg-surface-container-lowest/90 backdrop-blur">
+      <div class="mx-auto flex h-16 max-w-3xl items-center justify-between px-4">
+        <a href="#topo" class="flex items-center gap-2 text-headline-sm text-primary">
+          <span class="material-symbols-outlined">shopping_basket</span>
+          Lista de Compras
+        </a>
+        <nav class="hidden items-center gap-1 md:flex" aria-label="Seções">
+          <a class="btn btn-ghost min-h-10" href="#secao-lista">Lista</a>
+          <a class="btn btn-ghost min-h-10" href="#secao-comparativo">Comparativo</a>
+          <a class="btn btn-ghost min-h-10" href="#secao-historico">Histórico</a>
+        </nav>
+        <button id="alternar-tema" type="button" class="btn btn-ghost size-12 min-h-0 p-0" aria-label="Alternar modo escuro">
+          <span class="material-symbols-outlined" id="icone-tema">dark_mode</span>
+        </button>
+      </div>
+    </header>
 
-      <section class="card shadow-sm mb-4">
-        <div class="card-body">
-          <form id="form-item" class="row g-2">
-            <div class="col-12 col-sm-6">
-              <label for="nome" class="form-label small mb-1">Item</label>
-              <input
-                type="text"
-                id="nome"
-                name="nome"
-                class="form-control"
-                placeholder="Ex.: Arroz"
-                required
-              />
-            </div>
+    <main id="topo" class="mx-auto max-w-3xl space-y-6 px-4 pt-6 pb-48 md:pb-32">
+      <!-- Resumo: muda conforme a fase (planejando / comprando) -->
+      <section id="resumo" aria-live="polite"></section>
 
-            <div class="col-12 col-sm-6">
-              <label for="marca" class="form-label small mb-1">Marca</label>
-              <input
-                type="text"
-                id="marca"
-                name="marca"
-                class="form-control"
-                placeholder="Ex.: Tio João"
-              />
-            </div>
+      <!-- Novo item (somente ao planejar) -->
+      <section id="secao-form" class="card p-4">
+        <h2 class="mb-3 text-headline-sm">Novo item</h2>
 
-            <div class="col-6 col-sm-4">
-              <label for="preco" class="form-label small mb-1"
-                >Preço (unidade)</label
-              >
-              <div class="input-group">
-                <span class="input-group-text">R$</span>
-                <input
-                  type="number"
-                  id="preco"
-                  name="preco"
-                  class="form-control"
-                  step="0.01"
-                  min="0"
-                  inputmode="decimal"
-                  required
-                />
-              </div>
-            </div>
-
-            <div class="col-6 col-sm-3">
-              <label for="quantidade" class="form-label small mb-1"
-                >Quantidade</label
-              >
-              <input
-                type="number"
-                id="quantidade"
-                name="quantidade"
-                class="form-control"
-                value="1"
-                min="1"
-                step="1"
-                inputmode="numeric"
-              />
-            </div>
-
-            <div class="col-12 col-sm-5">
-              <label for="peso" class="form-label small mb-1"
-                >Peso / volume (opcional)</label
-              >
-              <div class="input-group">
-                <input
-                  type="number"
-                  id="peso"
-                  name="peso"
-                  class="form-control"
-                  step="any"
-                  min="0"
-                  inputmode="decimal"
-                />
-                <select
-                  id="unidade"
-                  name="unidade"
-                  class="form-select flex-grow-0 w-auto"
-                  aria-label="Unidade"
-                ></select>
-              </div>
-            </div>
-
-            <div class="col-12">
-              <output
-                name="previa"
-                class="previa d-block text-success fw-semibold"
-              ></output>
-            </div>
-
-            <div class="col-12 d-grid">
-              <button type="submit" class="btn btn-primary">
-                Adicionar à lista
-              </button>
-            </div>
-          </form>
+        <div id="sugestoes-bloco" class="mb-4 hidden">
+          <p class="rotulo">Comprados com frequência</p>
+          <div id="sugestoes" class="flex flex-wrap gap-2"></div>
         </div>
+
+        <form id="form-item" class="grid grid-cols-6 gap-3" autocomplete="off">
+          <div class="col-span-6 sm:col-span-4">
+            <label class="rotulo" for="nome">Item</label>
+            <input class="campo" id="nome" name="nome" required placeholder="Ex.: Arroz" />
+          </div>
+          <div class="col-span-6 sm:col-span-2">
+            <label class="rotulo" for="marca">Marca</label>
+            <input class="campo" id="marca" name="marca" placeholder="Opcional" />
+          </div>
+          <div class="col-span-3 sm:col-span-2">
+            <label class="rotulo" for="preco">Preço estimado (R$)</label>
+            <input class="campo" id="preco" name="preco" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Opcional" />
+          </div>
+          <div class="col-span-3 sm:col-span-1">
+            <label class="rotulo" for="quantidade">Qtd.</label>
+            <input class="campo" id="quantidade" name="quantidade" type="number" min="0.001" step="any" inputmode="decimal" value="1" required />
+          </div>
+          <div class="col-span-3 sm:col-span-2">
+            <label class="rotulo" for="peso">Peso/volume</label>
+            <input class="campo" id="peso" name="peso" type="number" min="0" step="any" inputmode="decimal" placeholder="Ex.: 500" />
+          </div>
+          <div class="col-span-3 sm:col-span-1">
+            <label class="rotulo" for="unidade">Unid.</label>
+            <select class="campo" id="unidade" name="unidade"></select>
+          </div>
+
+          <p class="col-span-6 min-h-5 text-body-sm text-on-surface-variant">
+            <output id="previa" for="preco peso unidade"></output>
+          </p>
+
+          <button class="btn btn-tonal col-span-6" type="submit">
+            <span class="material-symbols-outlined">add</span>
+            Adicionar à lista
+          </button>
+        </form>
       </section>
 
-      <section class="card shadow-sm mb-4">
-        <div
-          class="card-header d-flex justify-content-between align-items-center"
-        >
-          <span class="fw-semibold">Lista atual</span>
-          <button
-            type="button"
-            class="btn btn-outline-primary btn-sm"
-            data-bs-toggle="modal"
-            data-bs-target="#modal-reaproveitar"
-          >
-            ♻️ Usar lista anterior
+      <!-- Lista atual -->
+      <section id="secao-lista" class="scroll-mt-20">
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <h2 class="text-headline-md" id="titulo-lista">Lista atual</h2>
+          <button id="usar-anterior" type="button" class="btn btn-tonal min-h-10 px-4">
+            <span class="material-symbols-outlined">content_copy</span>
+            Usar lista anterior
           </button>
         </div>
-        <ul id="lista" class="list-group list-group-flush"></ul>
-        <div
-          class="card-footer d-flex justify-content-between align-items-center"
-        >
-          <strong id="total"></strong>
-          <button
-            id="salvar-lista"
-            type="button"
-            class="btn btn-success btn-sm"
-          >
-            💾 Salvar no histórico
-          </button>
+        <ul id="lista" class="space-y-3"></ul>
+      </section>
+
+      <!-- Comparativo mensal -->
+      <section id="secao-comparativo" class="scroll-mt-20">
+        <h2 class="mb-3 text-headline-md">Comparativo mensal</h2>
+        <ul id="comparativo" class="space-y-3"></ul>
+      </section>
+
+      <!-- Histórico -->
+      <section id="secao-historico" class="scroll-mt-20">
+        <div class="mb-3 flex items-baseline justify-between">
+          <h2 class="text-headline-md">Listas salvas</h2>
+          <span id="contador-historico" class="text-body-sm text-on-surface-variant"></span>
         </div>
-      </section>
-
-      <section class="mb-4">
-        <h2 class="h5">📅 Comparativo mensal</h2>
-        <ul id="comparativo" class="list-group"></ul>
-      </section>
-
-      <section>
-        <h2 class="h5">🗂️ Listas salvas</h2>
-        <div id="historico" class="accordion"></div>
+        <div id="historico" class="space-y-3"></div>
       </section>
     </main>
 
-    <div
-      class="modal fade"
-      id="modal-reaproveitar"
-      tabindex="-1"
-      aria-labelledby="titulo-reaproveitar"
-      aria-hidden="true"
-    >
-      <div
-        class="modal-dialog modal-dialog-scrollable modal-fullscreen-sm-down"
-      >
-        <div class="modal-content">
-          <div class="modal-header">
-            <h2 class="modal-title h5" id="titulo-reaproveitar">
-              Usar lista anterior
-            </h2>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Fechar"
-            ></button>
+    <!-- Barra fixa: ação principal + navegação (celular) -->
+    <div class="fixed inset-x-0 bottom-0 z-30 border-t border-outline-variant bg-surface-container-lowest/90 backdrop-blur">
+      <div id="barra-acao" class="mx-auto flex max-w-3xl gap-3 px-4 py-3"></div>
+      <nav class="mx-auto grid max-w-3xl grid-cols-3 border-t border-outline-variant md:hidden" aria-label="Seções">
+        <a class="flex flex-col items-center py-2 text-label-md text-on-surface-variant" href="#secao-lista">
+          <span class="material-symbols-outlined">checklist</span>Lista
+        </a>
+        <a class="flex flex-col items-center py-2 text-label-md text-on-surface-variant" href="#secao-comparativo">
+          <span class="material-symbols-outlined">monitoring</span>Comparativo
+        </a>
+        <a class="flex flex-col items-center py-2 text-label-md text-on-surface-variant" href="#secao-historico">
+          <span class="material-symbols-outlined">history</span>Histórico
+        </a>
+      </nav>
+    </div>
+
+    <!-- Sheet: onde você vai comprar? -->
+    <dialog id="sheet-mercado" class="sheet">
+      <form method="dialog" id="form-mercado" class="space-y-4 p-5" autocomplete="off">
+        <h2 class="text-headline-md">Onde você vai comprar?</h2>
+        <p class="text-body-md text-on-surface-variant">O nome do mercado é opcional e ajuda a comparar preços no futuro.</p>
+        <div>
+          <label class="rotulo" for="mercado">Nome do mercado</label>
+          <input class="campo" id="mercado" name="mercado" placeholder="Ex.: Supermercado Extra" />
+        </div>
+        <div id="mercados-recentes" class="flex flex-wrap gap-2"></div>
+        <div class="flex gap-3">
+          <button type="button" id="pular-mercado" class="btn btn-ghost flex-1">Pular</button>
+          <button type="submit" class="btn btn-primary flex-[2]">Começar compra</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Sheet: quanto custou? -->
+    <dialog id="sheet-preco" class="sheet">
+      <form id="form-preco" class="space-y-4 p-5" autocomplete="off">
+        <div>
+          <h2 class="text-headline-md">Quanto custou?</h2>
+          <p id="preco-item" class="text-body-md text-on-surface-variant"></p>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="rotulo" for="preco-real">Preço pago (R$)</label>
+            <input class="campo" id="preco-real" name="preco" type="number" min="0.01" step="0.01" inputmode="decimal" required />
           </div>
-
-          <div class="modal-body">
-            <p id="reaproveitar-vazio" class="text-body-secondary mb-0 d-none">
-              Você ainda não salvou nenhuma lista no histórico.
-            </p>
-
-            <div id="reaproveitar-conteudo">
-              <label for="reaproveitar-origem" class="form-label small mb-1"
-                >Lista de origem</label
-              >
-              <select
-                id="reaproveitar-origem"
-                class="form-select mb-3"
-              ></select>
-
-              <div class="form-check mb-2">
-                <input
-                  class="form-check-input"
-                  type="checkbox"
-                  id="reaproveitar-todos"
-                />
-                <label class="form-check-label" for="reaproveitar-todos"
-                  >Selecionar todos</label
-                >
-              </div>
-
-              <ul id="reaproveitar-itens" class="list-group"></ul>
-            </div>
+          <div>
+            <label class="rotulo" for="quantidade-real">Quantidade</label>
+            <input class="campo" id="quantidade-real" name="quantidade" type="number" min="0.001" step="any" inputmode="decimal" required />
           </div>
+        </div>
+        <p id="preco-diferenca" class="min-h-7"></p>
+        <div class="flex gap-3">
+          <button type="button" id="preco-remover" class="btn btn-ghost hidden flex-1">Tirar do carrinho</button>
+          <button type="button" data-fechar class="btn btn-ghost flex-1">Cancelar</button>
+          <button type="submit" class="btn btn-primary flex-[2]">Colocar no carrinho</button>
+        </div>
+      </form>
+    </dialog>
 
-          <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-outline-secondary"
-              data-bs-dismiss="modal"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              id="reaproveitar-confirmar"
-              class="btn btn-primary"
-              data-bs-dismiss="modal"
-              disabled
-            >
-              Adicionar à lista
-            </button>
+    <!-- Sheet: usar lista anterior / copiar lista -->
+    <dialog id="sheet-reaproveitar" class="sheet">
+      <div class="space-y-4 p-5">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h2 class="text-headline-md">Usar lista anterior</h2>
+            <p class="text-body-md text-on-surface-variant">Escolha os itens e ajuste preço e quantidade.</p>
+          </div>
+          <button type="button" data-fechar class="btn btn-ghost size-12 min-h-0 p-0" aria-label="Fechar">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <p id="reaproveitar-vazio" class="hidden text-body-md text-on-surface-variant">
+          Você ainda não tem listas salvas. Finalize uma compra para poder reaproveitá-la.
+        </p>
+
+        <div id="reaproveitar-conteudo" class="space-y-4">
+          <div>
+            <label class="rotulo" for="reaproveitar-origem">Lista de origem</label>
+            <select class="campo" id="reaproveitar-origem"></select>
+          </div>
+          <label class="flex min-h-12 cursor-pointer items-center gap-3 text-label-lg">
+            <input type="checkbox" id="reaproveitar-todos" class="size-6 accent-primary" checked />
+            Selecionar todos
+          </label>
+          <ul id="reaproveitar-itens" class="space-y-2"></ul>
+          <div class="flex flex-col gap-2 sm:flex-row">
+            <button type="button" id="reaproveitar-substituir" class="btn btn-tonal flex-1">Substituir lista</button>
+            <button type="button" id="reaproveitar-juntar" class="btn btn-primary flex-[2]">Adicionar itens</button>
           </div>
         </div>
       </div>
-    </div>
+    </dialog>
 
     <script type="module" src="/src/main.js"></script>
   </body>

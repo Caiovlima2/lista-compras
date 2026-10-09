@@ -1,48 +1,81 @@
-import { calcularTotal } from './lista.js';
+import { normalizarTexto } from '../utils/texto.js';
 import { gerarId } from '../utils/id.js';
 
-export function criarRegistroHistorico(itens) {
+/** Monta o registro da compra a partir dos itens que foram para o carrinho. */
+export function criarRegistroHistorico(itensNoCarrinho, { mercado, inicio, economia, agora = new Date() }) {
+  const itens = itensNoCarrinho.map(({ id, nome, marca, peso, unidade, preco: estimado, compra }) => ({
+    id,
+    nome,
+    marca,
+    peso,
+    unidade,
+    preco: compra.preco,
+    quantidade: compra.quantidade,
+    precoEstimado: estimado,
+  }));
+
   return {
     id: gerarId(),
-    data: new Date().toISOString(),
-    itens: [...itens],
-    total: calcularTotal(itens),
+    data: agora.toISOString(),
+    mercado,
+    inicio,
+    fim: agora.toISOString(),
+    itens,
+    total: itens.reduce((soma, item) => soma + item.preco * item.quantidade, 0),
+    economia,
   };
 }
 
-/**
- * Soma os totais por mês e calcula a variação em relação ao mês anterior.
- * @returns {{ mes: string, total: number, variacao: number | null }[]}
- */
+const porDataCrescente = (a, b) => new Date(a.data) - new Date(b.data);
+const porDataDecrescente = (a, b) => porDataCrescente(b, a);
+
+export const ordenarRegistrosRecentes = (registros) => [...registros].sort(porDataDecrescente);
+
+/** Total gasto por mês (hora local) e variação percentual em relação ao mês anterior. */
 export function calcularComparativoMensal(registros) {
-  const totaisPorMes = somarTotaisPorMes(registros);
-  const meses = Object.keys(totaisPorMes).sort();
+  const porMes = new Map();
 
-  return meses.map((mes, indice) => {
-    const totalAnterior = indice > 0 ? totaisPorMes[meses[indice - 1]] : null;
-    return {
-      mes,
-      total: totaisPorMes[mes],
-      variacao: calcularVariacaoPercentual(totalAnterior, totaisPorMes[mes]),
-    };
+  [...registros].sort(porDataCrescente).forEach(({ data, total }) => {
+    const d = new Date(data);
+    const chave = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const atual = porMes.get(chave) ?? { chave, total: 0, compras: 0 };
+    porMes.set(chave, { ...atual, total: atual.total + total, compras: atual.compras + 1 });
   });
+
+  const meses = [...porMes.values()];
+  return meses
+    .map((mes, indice) => {
+      const anterior = meses[indice - 1];
+      const variacao = anterior && anterior.total > 0 ? ((mes.total - anterior.total) / anterior.total) * 100 : null;
+      return { ...mes, variacao };
+    })
+    .reverse();
 }
 
-function somarTotaisPorMes(registros) {
-  return registros.reduce((totais, { data, total }) => {
-    const mes = chaveDoMes(data);
-    return { ...totais, [mes]: (totais[mes] ?? 0) + total };
-  }, {});
+/** Mercados já usados, do mais recente para o mais antigo, sem repetir. */
+export function listarMercadosRecentes(registros, limite = 5) {
+  const vistos = new Map();
+  ordenarRegistrosRecentes(registros).forEach(({ mercado }) => {
+    const chave = normalizarTexto(mercado ?? '');
+    if (chave && !vistos.has(chave)) vistos.set(chave, mercado);
+  });
+  return [...vistos.values()].slice(0, limite);
 }
 
-function calcularVariacaoPercentual(anterior, atual) {
-  if (!anterior) return null;
-  return ((atual - anterior) / anterior) * 100;
-}
+/** Itens mais comprados, com os dados da compra mais recente de cada um. */
+export function listarSugestoesFrequentes(registros, limite = 8) {
+  const contagem = new Map();
 
-// Usa o fuso local para uma compra feita à noite não cair no mês seguinte.
-function chaveDoMes(dataIso) {
-  const data = new Date(dataIso);
-  const mes = String(data.getMonth() + 1).padStart(2, '0');
-  return `${data.getFullYear()}-${mes}`;
+  [...registros].sort(porDataCrescente).forEach(({ itens }) => {
+    itens.forEach((item) => {
+      const chave = normalizarTexto(item.nome);
+      const atual = contagem.get(chave);
+      contagem.set(chave, { item, vezes: (atual?.vezes ?? 0) + 1 });
+    });
+  });
+
+  return [...contagem.values()]
+    .sort((a, b) => b.vezes - a.vezes)
+    .slice(0, limite)
+    .map(({ item }) => item);
 }

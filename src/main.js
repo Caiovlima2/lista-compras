@@ -1,100 +1,175 @@
-import 'bootstrap/dist/css/bootstrap.min.css';
-import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import './style.css';
 
-import {
-  carregarItens,
-  salvarItens,
-  carregarHistorico,
-  salvarHistorico,
-} from './services/storage.js';
-import { criarItem } from './domain/item.js';
-import { calcularTotal } from './domain/lista.js';
-import { criarRegistroHistorico, calcularComparativoMensal } from './domain/historico.js';
-import { iniciarFormItem } from './components/formItem.js';
-import { iniciarReaproveitamento } from './components/reaproveitarLista.js';
-import { renderListaItens } from './components/listaItens.js';
-import { renderHistorico } from './components/historico.js';
-import { renderComparativo } from './components/comparativo.js';
-import { formatarPreco } from './utils/formatadores.js';
+import { carregarHistorico, carregarItens, carregarSessao, salvarHistorico, salvarItens, salvarSessao } from './services/storage.js';
+import { criarItem, normalizarItem } from './domain/item.js';
+import { calcularComparativoMensal, criarRegistroHistorico, listarMercadosRecentes, listarSugestoesFrequentes } from './domain/historico.js';
+import { calcularEconomia, criarIndiceHistorico } from './domain/economia.js';
+import { contarNoCarrinho, estaNoCarrinho } from './domain/lista.js';
+import { criarSessaoPlanejando, estaComprando, iniciarCompra, normalizarSessao } from './domain/sessao.js';
+
+import { iniciarTema } from './components/temaToggle.js';
+import { renderizarResumo } from './components/resumo.js';
+import { renderizarBarraAcao } from './components/barraAcao.js';
+import { renderizarLista } from './components/listaItens.js';
+import { renderizarHistorico } from './components/historico.js';
+import { renderizarComparativo } from './components/comparativo.js';
+import { iniciarFormItem, renderizarSugestoes } from './components/formItem.js';
+import { iniciarSheetMercado } from './components/sheetMercado.js';
+import { iniciarSheetPreco } from './components/sheetPreco.js';
+import { MODOS, iniciarReaproveitarLista } from './components/reaproveitarLista.js';
+
+const $ = (seletor) => document.querySelector(seletor);
 
 const elementos = {
-  form: document.querySelector('#form-item'),
-  lista: document.querySelector('#lista'),
-  total: document.querySelector('#total'),
-  salvarLista: document.querySelector('#salvar-lista'),
-  comparativo: document.querySelector('#comparativo'),
-  historico: document.querySelector('#historico'),
-  modalReaproveitar: document.querySelector('#modal-reaproveitar'),
+  resumo: $('#resumo'),
+  secaoForm: $('#secao-form'),
+  formItem: $('#form-item'),
+  previa: $('#previa'),
+  sugestoes: $('#sugestoes'),
+  sugestoesBloco: $('#sugestoes-bloco'),
+  tituloLista: $('#titulo-lista'),
+  lista: $('#lista'),
+  usarAnterior: $('#usar-anterior'),
+  barraAcao: $('#barra-acao'),
+  comparativo: $('#comparativo'),
+  historico: $('#historico'),
+  contadorHistorico: $('#contador-historico'),
 };
 
+/* ---------- Estado: tudo muda por atualizarEstado ---------- */
 const estado = {
-  itens: carregarItens(),
+  itens: carregarItens().map(normalizarItem),
   registros: carregarHistorico(),
+  sessao: normalizarSessao(carregarSessao()),
 };
 
-// ---------- Atualização da tela ----------
-
-function atualizarLista() {
-  renderListaItens(elementos.lista, estado.itens, { aoRemover: removerItem });
-  elementos.total.textContent = `Total: ${formatarPreco(calcularTotal(estado.itens))}`;
+function atualizarEstado(parcial) {
+  Object.assign(estado, parcial);
+  salvarItens(estado.itens);
+  salvarHistorico(estado.registros);
+  salvarSessao(estado.sessao);
+  renderizar();
 }
 
-function atualizarHistorico() {
-  renderHistorico(elementos.historico, estado.registros, { aoExcluir: excluirRegistro });
-  renderComparativo(elementos.comparativo, calcularComparativoMensal(estado.registros));
-}
+const atualizarItem = (id, mudancas) =>
+  atualizarEstado({ itens: estado.itens.map((item) => (item.id === id ? { ...item, ...mudancas } : item)) });
 
-// ---------- Mudanças de estado (sempre salvam e redesenham) ----------
+const buscarItem = (id) => estado.itens.find((item) => item.id === id);
 
-function definirItens(novosItens) {
-  estado.itens = novosItens;
-  salvarItens(novosItens);
-  atualizarLista();
-}
-
-function definirRegistros(novosRegistros) {
-  estado.registros = novosRegistros;
-  salvarHistorico(novosRegistros);
-  atualizarHistorico();
-}
-
-// ---------- Ações do usuário ----------
-
-function adicionarItens(dadosDosItens) {
-  definirItens([...estado.itens, ...dadosDosItens.map(criarItem)]);
+/* ---------- Ações da lista ---------- */
+function adicionarItem(dados) {
+  atualizarEstado({ itens: [...estado.itens, criarItem(dados)] });
 }
 
 function removerItem(id) {
-  definirItens(estado.itens.filter((item) => item.id !== id));
+  atualizarEstado({ itens: estado.itens.filter((item) => item.id !== id) });
 }
 
-function salvarListaAtual() {
-  if (estado.itens.length === 0) {
-    alert('A lista está vazia.');
+function alternarCarrinho(id) {
+  const item = buscarItem(id);
+  if (estaNoCarrinho(item)) return atualizarItem(id, { compra: null });
+  // Sem estimativa não dá para assumir o preço: pergunta quanto custou.
+  if (item.preco === null) return sheetPreco.abrir(item);
+  atualizarItem(id, { compra: { preco: item.preco, quantidade: item.quantidade } });
+}
+
+const registrarPreco = (id) => sheetPreco.abrir(buscarItem(id));
+
+/* ---------- Fluxo da compra ---------- */
+const comecarCompra = () => sheetMercado.abrir(listarMercadosRecentes(estado.registros));
+
+const voltarAPlanejar = () => atualizarEstado({ sessao: criarSessaoPlanejando() });
+
+function finalizarCompra() {
+  const noCarrinho = estado.itens.filter(estaNoCarrinho);
+  if (noCarrinho.length === 0) {
+    alert('Coloque pelo menos um item no carrinho antes de finalizar.');
     return;
   }
 
-  definirRegistros([...estado.registros, criarRegistroHistorico(estado.itens)]);
-
-  if (confirm('Lista salva no histórico! Deseja limpar a lista atual?')) {
-    definirItens([]);
+  const restantes = estado.itens.filter((item) => !estaNoCarrinho(item));
+  if (restantes.length > 0 && !confirm(`${restantes.length} item(ns) ficaram fora do carrinho e continuarão na lista. Finalizar mesmo assim?`)) {
+    return;
   }
+
+  const economia = calcularEconomia(estado.itens, criarIndiceHistorico(estado.registros));
+  const registro = criarRegistroHistorico(noCarrinho, { mercado: estado.sessao.mercado, inicio: estado.sessao.inicio, economia });
+
+  atualizarEstado({
+    registros: [...estado.registros, registro],
+    itens: restantes,
+    sessao: criarSessaoPlanejando(),
+  });
 }
 
+/* ---------- Histórico ---------- */
 function excluirRegistro(id) {
-  if (!confirm('Excluir esta lista do histórico?')) return;
-  definirRegistros(estado.registros.filter((registro) => registro.id !== id));
+  if (!confirm('Excluir esta lista salva?')) return;
+  atualizarEstado({ registros: estado.registros.filter((registro) => registro.id !== id) });
 }
 
-// ---------- Inicialização ----------
+function aplicarListaCopiada({ itens, modo }) {
+  const substituir = modo === MODOS.SUBSTITUIR;
+  atualizarEstado({ itens: substituir ? itens : [...estado.itens, ...itens] });
+}
 
-iniciarFormItem(elementos.form, { aoAdicionar: (dados) => adicionarItens([dados]) });
-iniciarReaproveitamento(elementos.modalReaproveitar, {
-  obterRegistros: () => estado.registros,
-  aoConfirmar: adicionarItens,
+/* ---------- Renderização ---------- */
+function renderizar() {
+  const comprando = estaComprando(estado.sessao);
+  const indiceHistorico = criarIndiceHistorico(estado.registros);
+  const economia = calcularEconomia(estado.itens, indiceHistorico);
+
+  renderizarResumo(elementos.resumo, { itens: estado.itens, sessao: estado.sessao, comprando, economia });
+  renderizarBarraAcao(elementos.barraAcao, {
+    comprando,
+    temItens: estado.itens.length > 0,
+    aoComecar: comecarCompra,
+    aoFinalizar: finalizarCompra,
+    aoVoltar: voltarAPlanejar,
+  });
+
+  elementos.secaoForm.classList.toggle('hidden', comprando);
+  elementos.tituloLista.textContent = comprando
+    ? `No mercado · ${contarNoCarrinho(estado.itens)}/${estado.itens.length}`
+    : 'Lista atual';
+
+  renderizarLista(elementos.lista, {
+    itens: estado.itens,
+    comprando,
+    indiceHistorico,
+    acoes: { remover: removerItem, alternarCarrinho, registrarPreco },
+  });
+
+  renderizarSugestoes(elementos.sugestoes, elementos.sugestoesBloco, listarSugestoesFrequentes(estado.registros), (s) => formItem.preencher(s));
+  renderizarComparativo(elementos.comparativo, calcularComparativoMensal(estado.registros));
+  renderizarHistorico(elementos.historico, elementos.contadorHistorico, estado.registros, {
+    copiar: (id) => reaproveitar.abrir(id),
+    excluir: excluirRegistro,
+  });
+}
+
+/* ---------- Inicialização ---------- */
+iniciarTema({ botao: $('#alternar-tema'), icone: $('#icone-tema') });
+
+const formItem = iniciarFormItem({ formulario: elementos.formItem, previa: elementos.previa, aoAdicionar: adicionarItem });
+
+const sheetMercado = iniciarSheetMercado({
+  dialog: $('#sheet-mercado'),
+  aoConfirmar: (mercado) => atualizarEstado({ sessao: iniciarCompra(mercado) }),
 });
-elementos.salvarLista.addEventListener('click', salvarListaAtual);
 
-atualizarLista();
-atualizarHistorico();
+const sheetPreco = iniciarSheetPreco({
+  dialog: $('#sheet-preco'),
+  aoConfirmar: (id, compra) => atualizarItem(id, { compra }),
+  aoRemoverDoCarrinho: (id) => atualizarItem(id, { compra: null }),
+});
+
+const reaproveitar = iniciarReaproveitarLista({
+  dialog: $('#sheet-reaproveitar'),
+  obterRegistros: () => estado.registros,
+  aoConfirmar: aplicarListaCopiada,
+});
+
+elementos.usarAnterior.addEventListener('click', () => reaproveitar.abrir());
+
+renderizar();

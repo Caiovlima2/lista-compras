@@ -1,189 +1,123 @@
 import { criarElemento } from '../utils/dom.js';
-import { gerarId } from '../utils/id.js';
-import {
-  formatarData,
-  formatarPesoItem,
-  formatarPreco,
-  formatarQuantidade,
-  formatarTituloItem,
-} from '../utils/formatadores.js';
+import { formatarData, formatarPreco, formatarTituloItem, formatarPesoItem } from '../utils/formatadores.js';
+import { criarItem } from '../domain/item.js';
+import { ordenarRegistrosRecentes } from '../domain/historico.js';
+import { abrirSheet, configurarFechamento } from './sheet.js';
 
-export function iniciarReaproveitamento(modal, { obterRegistros, aoConfirmar }) {
-  const elementos = {
-    vazio: modal.querySelector('#reaproveitar-vazio'),
-    conteudo: modal.querySelector('#reaproveitar-conteudo'),
-    origem: modal.querySelector('#reaproveitar-origem'),
-    marcarTodos: modal.querySelector('#reaproveitar-todos'),
-    lista: modal.querySelector('#reaproveitar-itens'),
-    confirmar: modal.querySelector('#reaproveitar-confirmar'),
-  };
+export const MODOS = { JUNTAR: 'juntar', SUBSTITUIR: 'substituir' };
 
-  let registros = [];
+/** Sheet para copiar uma lista salva (inteira ou só alguns itens) para a lista atual. */
+export function iniciarReaproveitarLista({ dialog, obterRegistros, aoConfirmar }) {
+  const vazio = dialog.querySelector('#reaproveitar-vazio');
+  const conteudo = dialog.querySelector('#reaproveitar-conteudo');
+  const origem = dialog.querySelector('#reaproveitar-origem');
+  const todos = dialog.querySelector('#reaproveitar-todos');
+  const listaItens = dialog.querySelector('#reaproveitar-itens');
+  const botaoJuntar = dialog.querySelector('#reaproveitar-juntar');
+  const botaoSubstituir = dialog.querySelector('#reaproveitar-substituir');
+
+  /** Cada linha guarda o item original e seus campos editáveis. */
   let linhas = [];
 
-  function aoAbrirModal() {
-    registros = [...obterRegistros()].sort((a, b) => b.data.localeCompare(a.data));
-    const temRegistros = registros.length > 0;
+  configurarFechamento(dialog);
 
-    elementos.vazio.classList.toggle('d-none', temRegistros);
-    elementos.conteudo.classList.toggle('d-none', !temRegistros);
+  const linhasSelecionadas = () => linhas.filter((linha) => linha.checkbox.checked);
 
-    if (temRegistros) {
-      preencherOrigens();
-      mostrarItensDoRegistroSelecionado();
-    } else {
-      linhas = [];
-      atualizarBotaoConfirmar();
-    }
-  }
-
-  function preencherOrigens() {
-    const opcoes = registros.map((registro, indice) =>
-      criarElemento('option', {
-        texto: descreverRegistro(registro),
-        atributos: { value: indice },
+  const montarItens = () =>
+    linhasSelecionadas().map(({ item, preco, quantidade }) =>
+      criarItem({
+        nome: item.nome,
+        marca: item.marca,
+        peso: item.peso,
+        unidade: item.unidade,
+        preco: preco.value === '' ? null : Number(preco.value),
+        quantidade: Number(quantidade.value) || 1,
       }),
     );
-    elementos.origem.replaceChildren(...opcoes);
-  }
 
-  function mostrarItensDoRegistroSelecionado() {
-    const registro = registros[Number(elementos.origem.value)];
-
-    linhas = registro.itens.map((item) => criarLinha(item, atualizarBotaoConfirmar));
-    elementos.lista.replaceChildren(...linhas.map((linha) => linha.elemento));
-    elementos.marcarTodos.checked = false;
-    atualizarBotaoConfirmar();
-  }
-
-  function atualizarBotaoConfirmar() {
-    const total = linhas.filter((linha) => linha.estaMarcada()).length;
-
-    elementos.confirmar.disabled = total === 0;
-    elementos.confirmar.textContent = total
-      ? `Adicionar ${formatarQuantidade(total)}`
-      : 'Adicionar à lista';
-  }
-
-  function confirmar() {
-    const selecionados = linhas
-      .filter((linha) => linha.estaMarcada())
-      .map((linha) => linha.lerDados());
-
-    aoConfirmar(selecionados);
-  }
-
-  modal.addEventListener('show.bs.modal', aoAbrirModal);
-  elementos.origem.addEventListener('change', mostrarItensDoRegistroSelecionado);
-  elementos.confirmar.addEventListener('click', confirmar);
-  elementos.marcarTodos.addEventListener('change', () => {
-    linhas.forEach((linha) => linha.marcar(elementos.marcarTodos.checked));
-    atualizarBotaoConfirmar();
-  });
-}
-
-function descreverRegistro({ data, itens, total }) {
-  return [formatarData(data), formatarQuantidade(itens.length), formatarPreco(total)].join(' — ');
-}
-
-function descreverUltimoPreco(item) {
-  const peso = formatarPesoItem(item);
-  return `Último preço: ${formatarPreco(item.preco)}${peso ? ` · ${peso}` : ''}`;
-}
-
-function criarCampoNumerico({ valor, rotulo, ...atributos }) {
-  return criarElemento('input', {
-    classe: 'form-control',
-    atributos: { type: 'number', value: valor, 'aria-label': rotulo, ...atributos },
-  });
-}
-
-/**
- * Uma linha da janela: checkbox + campos de preço e quantidade já preenchidos
- * com os valores da lista anterior. Editar qualquer campo marca o item.
- */
-function criarLinha(item, aoMudar) {
-  const idDaCaixa = `reaproveitar-${gerarId()}`;
-
-  const caixa = criarElemento('input', {
-    classe: 'form-check-input',
-    atributos: { type: 'checkbox', id: idDaCaixa },
-  });
-
-  const preco = criarCampoNumerico({
-    valor: item.preco,
-    rotulo: `Novo preço de ${item.nome}`,
-    step: '0.01',
-    min: '0',
-    inputmode: 'decimal',
-  });
-
-  const quantidade = criarCampoNumerico({
-    valor: item.quantidade ?? 1,
-    rotulo: `Quantidade de ${item.nome}`,
-    step: '1',
-    min: '1',
-    inputmode: 'numeric',
-  });
-
-  const marcarAoEditar = () => {
-    caixa.checked = true;
-    aoMudar();
+  const atualizarRodape = () => {
+    const itens = montarItens();
+    const total = itens.reduce((soma, item) => soma + (item.preco ?? 0) * item.quantidade, 0);
+    botaoJuntar.textContent = itens.length ? `Adicionar ${itens.length} · ${formatarPreco(total)}` : 'Adicionar itens';
+    botaoJuntar.disabled = botaoSubstituir.disabled = itens.length === 0;
+    todos.checked = linhas.length > 0 && linhasSelecionadas().length === linhas.length;
   };
-  preco.addEventListener('input', marcarAoEditar);
-  quantidade.addEventListener('input', marcarAoEditar);
-  caixa.addEventListener('change', aoMudar);
 
-  const titulo = criarElemento(
-    'label',
-    { classe: 'form-check-label', atributos: { for: idDaCaixa } },
-    criarElemento('span', { classe: 'fw-semibold d-block', texto: formatarTituloItem(item) }),
-    criarElemento('small', { classe: 'text-body-secondary', texto: descreverUltimoPreco(item) }),
-  );
+  const criarCampo = (rotulo, valor, atributos) => {
+    const input = criarElemento('input', { classe: 'campo min-h-10 px-2', atributos: { type: 'number', min: 0, step: 'any', inputmode: 'decimal', value: valor, ...atributos } });
+    input.addEventListener('input', atualizarRodape);
+    return { input, rotulo: criarElemento('label', { classe: 'block' }, criarElemento('span', { classe: 'rotulo', texto: rotulo }), input) };
+  };
 
-  const campos = criarElemento(
-    'div',
-    { classe: 'row g-2 mt-1' },
-    criarElemento(
-      'div',
-      { classe: 'col-7' },
+  const criarLinha = (item) => {
+    const checkbox = criarElemento('input', { classe: 'size-6 shrink-0 cursor-pointer accent-primary', atributos: { type: 'checkbox', checked: true, 'aria-label': `Selecionar ${item.nome}` } });
+    checkbox.addEventListener('change', atualizarRodape);
+    const preco = criarCampo('Preço (R$)', item.preco, { step: '0.01' });
+    const quantidade = criarCampo('Qtd.', item.quantidade, { min: 0.001 });
+
+    const elemento = criarElemento(
+      'li',
+      { classe: 'card space-y-2 p-3' },
       criarElemento(
         'div',
-        { classe: 'input-group input-group-sm' },
-        criarElemento('span', { classe: 'input-group-text', texto: 'R$' }),
-        preco,
+        { classe: 'flex items-center gap-3' },
+        criarElemento('label', { classe: 'grid size-10 shrink-0 cursor-pointer place-items-center' }, checkbox),
+        criarElemento(
+          'div',
+          { classe: 'min-w-0' },
+          criarElemento('p', { classe: 'truncate text-body-lg', texto: formatarTituloItem(item) }),
+          criarElemento('p', { classe: 'text-body-sm text-on-surface-variant', texto: formatarPesoItem(item) }),
+        ),
       ),
-    ),
-    criarElemento(
-      'div',
-      { classe: 'col-5' },
-      criarElemento(
-        'div',
-        { classe: 'input-group input-group-sm' },
-        criarElemento('span', { classe: 'input-group-text', texto: 'Qtd' }),
-        quantidade,
-      ),
-    ),
-  );
+      criarElemento('div', { classe: 'grid grid-cols-2 gap-3' }, preco.rotulo, quantidade.rotulo),
+    );
+
+    return { item, checkbox, preco: preco.input, quantidade: quantidade.input, elemento };
+  };
+
+  const mostrarRegistro = (registro) => {
+    linhas = registro.itens.map(criarLinha);
+    listaItens.replaceChildren(...linhas.map((linha) => linha.elemento));
+    atualizarRodape();
+  };
+
+  origem.addEventListener('change', () => {
+    mostrarRegistro(obterRegistros().find((registro) => registro.id === origem.value));
+  });
+
+  todos.addEventListener('change', () => {
+    linhas.forEach((linha) => (linha.checkbox.checked = todos.checked));
+    atualizarRodape();
+  });
+
+  const confirmar = (modo) => {
+    dialog.close();
+    aoConfirmar({ itens: montarItens(), modo });
+  };
+  botaoJuntar.addEventListener('click', () => confirmar(MODOS.JUNTAR));
+  botaoSubstituir.addEventListener('click', () => confirmar(MODOS.SUBSTITUIR));
 
   return {
-    elemento: criarElemento(
-      'li',
-      { classe: 'list-group-item' },
-      criarElemento('div', { classe: 'form-check' }, caixa, titulo),
-      campos,
-    ),
-    estaMarcada: () => caixa.checked,
-    marcar: (valor) => {
-      caixa.checked = valor;
+    /** Abre já na lista indicada (ou na mais recente). */
+    abrir(registroId) {
+      const registros = ordenarRegistrosRecentes(obterRegistros());
+      vazio.classList.toggle('hidden', registros.length > 0);
+      conteudo.classList.toggle('hidden', registros.length === 0);
+
+      if (registros.length > 0) {
+        origem.replaceChildren(
+          ...registros.map((registro) =>
+            criarElemento('option', {
+              texto: `${formatarData(registro.data)} · ${registro.mercado || 'Sem local'} · ${formatarPreco(registro.total)}`,
+              atributos: { value: registro.id },
+            }),
+          ),
+        );
+        origem.value = registroId ?? registros[0].id;
+        mostrarRegistro(registros.find((registro) => registro.id === origem.value));
+      }
+
+      abrirSheet(dialog);
     },
-    lerDados: () => ({
-      nome: item.nome,
-      marca: item.marca,
-      preco: Number(preco.value),
-      quantidade: Number(quantidade.value) || 1,
-      peso: item.peso,
-      unidade: item.unidade,
-    }),
   };
 }

@@ -1,46 +1,61 @@
-import { UNIDADES, calcularPrecoBase } from '../utils/calculos.js';
 import { criarElemento } from '../utils/dom.js';
-import { formatarPreco } from '../utils/formatadores.js';
+import { UNIDADES, calcularPrecoBase } from '../utils/calculos.js';
+import { formatarPrecoBase } from '../utils/formatadores.js';
 
-export function iniciarFormItem(form, { aoAdicionar }) {
-  preencherUnidades(form.elements.unidade);
+const lerNumero = (valor) => (valor === '' || valor === null ? null : Number(valor));
 
-  form.addEventListener('input', () => atualizarPrevia(form));
-
-  form.addEventListener('submit', (evento) => {
-    evento.preventDefault();
-    aoAdicionar(lerDadosDoFormulario(form));
-    form.reset();
-    form.elements.previa.value = '';
-    form.elements.nome.focus();
-  });
-}
-
-function preencherUnidades(select) {
-  const opcoes = UNIDADES.map((unidade) =>
-    criarElemento('option', { texto: unidade, atributos: { value: unidade } }),
-  );
-  select.replaceChildren(...opcoes);
-}
-
-function lerDadosDoFormulario(form) {
-  const dados = new FormData(form);
-
+function lerFormulario(formulario) {
+  const dados = new FormData(formulario);
   return {
-    nome: dados.get('nome').trim(),
-    marca: dados.get('marca').trim(),
-    preco: Number(dados.get('preco')),
-    quantidade: Number(dados.get('quantidade')) || 1,
-    peso: Number(dados.get('peso')),
-    unidade: dados.get('unidade'),
+    nome: String(dados.get('nome')),
+    marca: String(dados.get('marca')),
+    preco: lerNumero(dados.get('preco')),
+    quantidade: lerNumero(dados.get('quantidade')) ?? 1,
+    peso: lerNumero(dados.get('peso')),
+    unidade: String(dados.get('unidade')),
   };
 }
 
-function atualizarPrevia(form) {
-  const { preco, peso, unidade } = lerDadosDoFormulario(form);
-  const resultado = calcularPrecoBase(preco, peso, unidade);
+export function iniciarFormItem({ formulario, previa, aoAdicionar }) {
+  const selectUnidade = formulario.elements.unidade;
+  selectUnidade.replaceChildren(...UNIDADES.map((unidade) => criarElemento('option', { texto: unidade, atributos: { value: unidade } })));
 
-  form.elements.previa.value = resultado
-    ? `💡 Valor por ${resultado.rotulo}: ${formatarPreco(resultado.valor)}`
-    : '';
+  const atualizarPrevia = () => {
+    const { preco, peso, unidade } = lerFormulario(formulario);
+    const base = calcularPrecoBase(preco, peso, unidade);
+    previa.textContent = base ? `Valor por ${base.rotulo}: ${formatarPrecoBase(base)}` : '';
+  };
+
+  formulario.addEventListener('input', atualizarPrevia);
+
+  formulario.addEventListener('submit', (evento) => {
+    evento.preventDefault();
+    aoAdicionar(lerFormulario(formulario));
+    formulario.reset();
+    atualizarPrevia();
+    formulario.elements.nome.focus();
+  });
+
+  return {
+    /** Preenche o formulário a partir de uma sugestão do histórico. */
+    preencher({ nome, marca, preco, peso, unidade }) {
+      const campos = formulario.elements;
+      campos.nome.value = nome;
+      campos.marca.value = marca ?? '';
+      campos.preco.value = preco ?? '';
+      campos.peso.value = peso ?? '';
+      campos.unidade.value = unidade ?? UNIDADES[0];
+      atualizarPrevia();
+      campos.preco.focus();
+    },
+  };
+}
+
+export function renderizarSugestoes(container, bloco, sugestoes, aoEscolher) {
+  bloco.classList.toggle('hidden', sugestoes.length === 0);
+  container.replaceChildren(
+    ...sugestoes.map((sugestao) =>
+      criarElemento('button', { classe: 'chip', texto: sugestao.nome, atributos: { type: 'button' }, aoClicar: () => aoEscolher(sugestao) }),
+    ),
+  );
 }

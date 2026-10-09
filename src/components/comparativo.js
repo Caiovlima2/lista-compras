@@ -1,47 +1,51 @@
-import { criarElemento } from '../utils/dom.js';
+import { criarElemento, icone } from '../utils/dom.js';
 import { formatarMes, formatarPreco, formatarVariacao } from '../utils/formatadores.js';
 
-export function renderComparativo(container, meses) {
+function criarSeloVariacao(variacao) {
+  if (variacao === null) return null;
+  if (Math.abs(variacao) < 0.05) return criarElemento('span', { classe: 'badge-neutro', texto: 'Sem variação' });
+
+  const subiu = variacao > 0;
+  return criarElemento(
+    'span',
+    { classe: subiu ? 'badge-alerta' : 'badge-bom' },
+    icone(subiu ? 'trending_up' : 'trending_down', 'text-base'),
+    formatarVariacao(variacao),
+  );
+}
+
+export function renderizarComparativo(container, meses) {
   if (meses.length === 0) {
     container.replaceChildren(
       criarElemento('li', {
-        classe: 'list-group-item text-body-secondary',
-        texto: 'Salve listas para ver o comparativo entre meses.',
+        classe: 'rounded-lg border border-dashed border-outline-variant p-6 text-center text-on-surface-variant',
+        texto: 'Finalize compras para ver a evolução mês a mês.',
       }),
     );
     return;
   }
 
-  container.replaceChildren(...meses.map(criarLinhaMes));
-}
-
-function criarLinhaMes({ mes, total, variacao }) {
-  return criarElemento(
-    'li',
-    { classe: 'list-group-item d-flex justify-content-between align-items-center' },
-    criarElemento('span', { texto: formatarMes(mes) }),
-    criarElemento(
-      'span',
-      {},
-      criarElemento('strong', { texto: formatarPreco(total) }),
-      criarBadgeVariacao(variacao),
+  container.replaceChildren(
+    ...meses.map((mes) =>
+      criarElemento(
+        'li',
+        { classe: 'card flex items-center justify-between gap-3 p-4' },
+        criarElemento(
+          'div',
+          {},
+          criarElemento('p', { classe: 'text-body-lg capitalize', texto: formatarMes(mes.chave) }),
+          criarElemento('p', {
+            classe: 'text-body-sm text-on-surface-variant',
+            texto: `${mes.compras} ${mes.compras === 1 ? 'compra' : 'compras'}`,
+          }),
+        ),
+        criarElemento(
+          'div',
+          { classe: 'flex flex-col items-end gap-1' },
+          criarElemento('p', { classe: 'text-headline-sm', texto: formatarPreco(mes.total) }),
+          criarSeloVariacao(mes.variacao),
+        ),
+      ),
     ),
   );
-}
-
-function criarBadgeVariacao(variacao) {
-  if (variacao === null) return null;
-
-  return criarElemento('span', {
-    classe: `badge ms-2 ${corDaVariacao(variacao)}`,
-    texto: formatarVariacao(variacao),
-    atributos: { title: 'Variação em relação ao mês anterior' },
-  });
-}
-
-// Gastar mais que no mês anterior aparece em vermelho; gastar menos, em verde.
-function corDaVariacao(variacao) {
-  if (variacao > 0) return 'text-bg-danger';
-  if (variacao < 0) return 'text-bg-success';
-  return 'text-bg-secondary';
 }

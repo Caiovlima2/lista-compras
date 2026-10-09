@@ -1,20 +1,22 @@
 const CONVERSOES = {
-  g: { fator: 1000, base: 'kg' },
-  kg: { fator: 1, base: 'kg' },
-  ml: { fator: 1000, base: 'L' },
-  L: { fator: 1, base: 'L' },
+  g: { divisor: 1000, rotulo: 'kg' },
+  kg: { divisor: 1, rotulo: 'kg' },
+  ml: { divisor: 1000, rotulo: 'L' },
+  L: { divisor: 1, rotulo: 'L' },
 };
 
 export const UNIDADES = Object.keys(CONVERSOES);
 
 /**
- * Converte o preço para o valor por kg (ou por litro).
- * @returns {{ valor: number, rotulo: string } | null}
+ * Converte preço + peso/volume em preço por kg ou por litro.
+ * Retorna null quando faltam dados para calcular.
  */
 export function calcularPrecoBase(preco, peso, unidade) {
   const conversao = CONVERSOES[unidade];
-  if (!conversao || !peso || peso <= 0 || Number.isNaN(preco)) return null;
+  if (!conversao || !(preco > 0) || !(peso > 0)) return null;
 
-  const quantidadeBase = peso / conversao.fator;
-  return { valor: preco / quantidadeBase, rotulo: conversao.base };
+  return {
+    valor: preco / (peso / conversao.divisor),
+    rotulo: conversao.rotulo,
+  };
 }
