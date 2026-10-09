@@ -55,7 +55,7 @@
           <div id="sugestoes" class="flex flex-wrap gap-2"></div>
         </div>
 
-        <form id="form-item" class="grid grid-cols-6 gap-3" autocomplete="off">
+        <form id="form-item" class="grid grid-cols-6 items-end gap-3" autocomplete="off">
           <div class="col-span-6 sm:col-span-4">
             <label class="rotulo" for="nome">Item</label>
             <input class="campo" id="nome" name="nome" required placeholder="Ex.: Arroz" />
@@ -65,7 +65,7 @@
             <input class="campo" id="marca" name="marca" placeholder="Opcional" />
           </div>
           <div class="col-span-3 sm:col-span-2">
-            <label class="rotulo" for="preco">Preço estimado (R$)</label>
+            <label class="rotulo" for="preco">Preço (R$)</label>
             <input class="campo" id="preco" name="preco" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Opcional" />
           </div>
           <div class="col-span-3 sm:col-span-1">
@@ -73,7 +73,7 @@
             <input class="campo" id="quantidade" name="quantidade" type="number" min="0.001" step="any" inputmode="decimal" value="1" required />
           </div>
           <div class="col-span-3 sm:col-span-2">
-            <label class="rotulo" for="peso">Peso, volume ou unidades</label>
+            <label class="rotulo" for="peso">Peso / vol. / un.</label>
             <input class="campo" id="peso" name="peso" type="number" min="0" step="any" inputmode="decimal" placeholder="Ex.: 500 ou 12" />
           </div>
           <div class="col-span-3 sm:col-span-1">
