@@ -9,6 +9,7 @@ import {
   formatarTituloItem,
   formatarVariacao,
 } from '../utils/formatadores.js';
+import { aplicarMascaraPreco } from '../utils/mascaraPreco.js';
 import { lerNumero } from '../utils/numero.js';
 import { calcularDiferencaDoItem, calcularSubtotalExibido, estaNoCarrinho } from '../domain/lista.js';
 import { calcularPrecoBaseDoItem } from '../domain/item.js';
@@ -119,6 +120,8 @@ export function criarLinhaMercado(item, { custoBeneficio, acoes }) {
     },
   });
 
+  aplicarMascaraPreco(campoPreco);
+
   const confirmar = () => {
     const valor = lerNumero(campoPreco.value);
     if (valor === null || valor <= 0) {
@@ -128,7 +131,6 @@ export function criarLinhaMercado(item, { custoBeneficio, acoes }) {
     acoes.pegar(item.id, valor);
   };
 
-  campoPreco.addEventListener('focus', () => campoPreco.select());
   campoPreco.addEventListener('keydown', (evento) => {
     if (evento.key === 'Enter') {
       evento.preventDefault();

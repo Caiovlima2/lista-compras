@@ -1,6 +1,7 @@
 import { criarElemento, icone } from '../utils/dom.js';
 import { UNIDADES, calcularPrecoBase } from '../utils/calculos.js';
 import { formatarCampoPreco, formatarPreco, formatarPrecoBase } from '../utils/formatadores.js';
+import { aplicarMascaraPreco } from '../utils/mascaraPreco.js';
 import { lerNumero } from '../utils/numero.js';
 import { CATEGORIAS } from '../domain/categorias.js';
 import { criarStepper } from './stepper.js';
@@ -19,6 +20,8 @@ export function iniciarFormItem({ formulario, aoAdicionar, aoDigitar, buscarSuge
   const maisDetalhes = formulario.querySelector('#mais-detalhes');
   const rotuloBotao = formulario.querySelector('#rotulo-adicionar');
   const containerCategorias = formulario.querySelector('#categorias-form');
+
+  aplicarMascaraPreco(campos.preco);
 
   const stepper = criarStepper({ valor: 1, nome: 'quantidade' });
   formulario.querySelector('#quantidade-stepper').replaceChildren(stepper.elemento);

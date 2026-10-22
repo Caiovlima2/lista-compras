@@ -1,6 +1,7 @@
 import { criarElemento } from '../utils/dom.js';
 import { UNIDADES, calcularPrecoBase } from '../utils/calculos.js';
 import { formatarCampoPreco, formatarPreco, formatarPrecoBase } from '../utils/formatadores.js';
+import { aplicarMascaraPreco } from '../utils/mascaraPreco.js';
 import { lerNumero } from '../utils/numero.js';
 import { estaNoCarrinho } from '../domain/lista.js';
 import { OPCOES_CATEGORIA } from './formItem.js';
@@ -17,6 +18,8 @@ export function iniciarSheetEditarItem({ dialog, aoSalvar, aoExcluir, obterCusto
   const unidades = dialog.querySelector('#editar-unidades');
   const categorias = dialog.querySelector('#editar-categorias');
   let itemAtual = null;
+
+  aplicarMascaraPreco(campos.preco);
 
   const stepper = criarStepper({ valor: 1, nome: 'quantidade' });
   dialog.querySelector('#editar-quantidade').replaceChildren(stepper.elemento);

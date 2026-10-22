@@ -1,6 +1,7 @@
 import { criarElemento } from '../utils/dom.js';
 import { formatarData, formatarPreco, formatarTituloItem, formatarPesoItem } from '../utils/formatadores.js';
 import { formatarCampoPreco } from '../utils/formatadores.js';
+import { aplicarMascaraPreco } from '../utils/mascaraPreco.js';
 import { lerNumero } from '../utils/numero.js';
 import { criarItem } from '../domain/item.js';
 import { criarStepper } from './stepper.js';
@@ -54,6 +55,7 @@ export function iniciarReaproveitarLista({ dialog, obterRegistros, aoConfirmar }
       classe: 'campo min-h-12 pr-2 pl-9 text-right font-bold tabular-nums',
       atributos: { type: 'text', inputmode: 'decimal', placeholder: '0,00', value: formatarCampoPreco(item.preco ?? null), 'aria-label': `Preço de ${item.nome}` },
     });
+    aplicarMascaraPreco(preco);
     preco.addEventListener('input', atualizarRodape);
     const quantidade = criarStepper({ valor: item.quantidade, aoMudar: atualizarRodape });
 
