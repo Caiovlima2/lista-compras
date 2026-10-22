@@ -1,12 +1,14 @@
 import { calcularPrecoBase } from '../utils/calculos.js';
+import { normalizarTexto } from '../utils/texto.js';
 import { gerarId } from '../utils/id.js';
 
 /**
  * Um item da lista.
- * - preco: preço ESTIMADO por unidade (pode ser null = "Preço a definir")
+ * - preco: preço ESTIMADO por unidade (null = "Preço a definir")
  * - compra: null enquanto não está no carrinho; depois { preco, quantidade } reais
+ * - categoria: opcional ('' = sem categoria)
  */
-export function criarItem({ nome, marca = '', preco = null, peso = null, unidade = 'g', quantidade = 1 }) {
+export function criarItem({ nome, marca = '', preco = null, peso = null, unidade = 'g', quantidade = 1, categoria = '' }) {
   return {
     id: gerarId(),
     nome: nome.trim(),
@@ -15,6 +17,7 @@ export function criarItem({ nome, marca = '', preco = null, peso = null, unidade
     quantidade,
     peso,
     unidade,
+    categoria,
     compra: null,
   };
 }
@@ -30,12 +33,16 @@ export function normalizarItem(bruto) {
     peso: null,
     unidade: 'g',
     quantidade: 1,
+    categoria: '',
     ...item,
     compra,
   };
 }
 
-/** Preço por kg/L do item (usa o preço pago, se houver, senão o estimado). */
+/** Identifica "o mesmo produto" (nome + marca, sem acentos e sem diferença de maiúsculas). */
+export const chaveDoItem = ({ nome, marca }) => `${normalizarTexto(nome)}|${normalizarTexto(marca ?? '')}`;
+
+/** Preço por kg/L/un do item (usa o preço pago, se houver, senão o estimado). */
 export function calcularPrecoBaseDoItem(item) {
   const preco = item.compra?.preco ?? item.preco;
   return calcularPrecoBase(preco, item.peso, item.unidade);

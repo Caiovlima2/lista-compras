@@ -27,3 +27,14 @@ export function icone(nome, classe = '') {
     atributos: { 'aria-hidden': 'true' },
   });
 }
+
+/**
+ * Atualiza os filhos de um container reaproveitando os nós que já estão na posição certa.
+ * Assim, campos que não mudaram mantêm o foco (e o teclado aberto) durante a renderização.
+ */
+export function sincronizarFilhos(container, novosFilhos) {
+  novosFilhos.forEach((no, indice) => {
+    if (container.children[indice] !== no) container.insertBefore(no, container.children[indice] ?? null);
+  });
+  while (container.children.length > novosFilhos.length) container.lastElementChild.remove();
+}

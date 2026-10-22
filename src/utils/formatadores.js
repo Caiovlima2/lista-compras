@@ -30,3 +30,25 @@ export function formatarMes(chave) {
   const [ano, mes] = chave.split('-').map(Number);
   return new Date(ano, mes - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 }
+
+export const formatarCampoPreco = (valor) => (valor === null || valor === undefined ? '' : valor.toFixed(2).replace('.', ','));
+
+export const formatarDiaSemana = (iso) => {
+  const dia = new Date(iso).toLocaleDateString('pt-BR', { weekday: 'long' });
+  return dia.charAt(0).toUpperCase() + dia.slice(1);
+};
+
+const doisDigitos = (numero) => String(numero).padStart(2, '0');
+
+/** 75000 ms -> "01:15"; mais de uma hora -> "1:02:03". */
+export function formatarCronometro(milissegundos) {
+  const total = Math.max(0, Math.floor(milissegundos / 1000));
+  const horas = Math.floor(total / 3600);
+  const minutos = Math.floor((total % 3600) / 60);
+  const segundos = total % 60;
+  return horas > 0
+    ? `${horas}:${doisDigitos(minutos)}:${doisDigitos(segundos)}`
+    : `${doisDigitos(minutos)}:${doisDigitos(segundos)}`;
+}
+
+export const formatarMinutos = (milissegundos) => `${Math.max(1, Math.round(milissegundos / 60000))} min`;

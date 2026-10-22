@@ -1,3 +1,5 @@
+import { chaveDoItem } from './item.js';
+
 export const estaNoCarrinho = (item) => item.compra !== null;
 
 const subtotalPrevisto = (item) => (item.preco ?? 0) * item.quantidade;
@@ -29,3 +31,22 @@ export function calcularDiferencaDoItem(item) {
 }
 
 export const calcularSubtotalExibido = (item) => (estaNoCarrinho(item) ? subtotalPago(item) : subtotalPrevisto(item));
+
+/** Quanto se esperava gastar com os itens que já estão no carrinho (só os que tinham estimativa). */
+export const calcularMetaDoCarrinho = (itens) =>
+  somar(
+    itens.filter((item) => estaNoCarrinho(item) && item.preco !== null),
+    subtotalPrevisto,
+  );
+
+export const contarPendentes = (itens) => itens.filter((item) => !estaNoCarrinho(item)).length;
+
+/** Procura na lista um item igual (mesmo nome e marca) ao que está sendo adicionado. */
+export const encontrarDuplicado = (itens, novo) => itens.find((item) => chaveDoItem(item) === chaveDoItem(novo));
+
+/** Soma quantidade a um item existente (na compra, se já estiver no carrinho). */
+export function somarQuantidade(item, quantidade) {
+  return estaNoCarrinho(item)
+    ? { ...item, compra: { ...item.compra, quantidade: item.compra.quantidade + quantidade } }
+    : { ...item, quantidade: item.quantidade + quantidade };
+}

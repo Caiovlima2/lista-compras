@@ -1,6 +1,9 @@
 import { criarElemento } from '../utils/dom.js';
 import { formatarData, formatarPreco, formatarTituloItem, formatarPesoItem } from '../utils/formatadores.js';
+import { formatarCampoPreco } from '../utils/formatadores.js';
+import { lerNumero } from '../utils/numero.js';
 import { criarItem } from '../domain/item.js';
+import { criarStepper } from './stepper.js';
 import { ordenarRegistrosRecentes } from '../domain/historico.js';
 import { abrirSheet, configurarFechamento } from './sheet.js';
 
@@ -30,8 +33,9 @@ export function iniciarReaproveitarLista({ dialog, obterRegistros, aoConfirmar }
         marca: item.marca,
         peso: item.peso,
         unidade: item.unidade,
-        preco: preco.value === '' ? null : Number(preco.value),
-        quantidade: Number(quantidade.value) || 1,
+        categoria: item.categoria ?? '',
+        preco: lerNumero(preco.value),
+        quantidade: quantidade.ler(),
       }),
     );
 
@@ -43,17 +47,15 @@ export function iniciarReaproveitarLista({ dialog, obterRegistros, aoConfirmar }
     todos.checked = linhas.length > 0 && linhasSelecionadas().length === linhas.length;
   };
 
-  const criarCampo = (rotulo, valor, atributos) => {
-    const input = criarElemento('input', { classe: 'campo min-h-10 px-2', atributos: { type: 'number', min: 0, step: 'any', inputmode: 'decimal', value: valor, ...atributos } });
-    input.addEventListener('input', atualizarRodape);
-    return { input, rotulo: criarElemento('label', { classe: 'block' }, criarElemento('span', { classe: 'rotulo', texto: rotulo }), input) };
-  };
-
   const criarLinha = (item) => {
     const checkbox = criarElemento('input', { classe: 'size-6 shrink-0 cursor-pointer accent-primary', atributos: { type: 'checkbox', checked: true, 'aria-label': `Selecionar ${item.nome}` } });
     checkbox.addEventListener('change', atualizarRodape);
-    const preco = criarCampo('Preço (R$)', item.preco, { step: '0.01' });
-    const quantidade = criarCampo('Qtd.', item.quantidade, { min: 0.001 });
+    const preco = criarElemento('input', {
+      classe: 'campo min-h-12 pr-2 pl-9 text-right font-bold tabular-nums',
+      atributos: { type: 'text', inputmode: 'decimal', placeholder: '0,00', value: formatarCampoPreco(item.preco ?? null), 'aria-label': `Preço de ${item.nome}` },
+    });
+    preco.addEventListener('input', atualizarRodape);
+    const quantidade = criarStepper({ valor: item.quantidade, aoMudar: atualizarRodape });
 
     const elemento = criarElemento(
       'li',
@@ -69,10 +71,20 @@ export function iniciarReaproveitarLista({ dialog, obterRegistros, aoConfirmar }
           criarElemento('p', { classe: 'text-body-sm text-on-surface-variant', texto: formatarPesoItem(item) }),
         ),
       ),
-      criarElemento('div', { classe: 'grid grid-cols-2 gap-3' }, preco.rotulo, quantidade.rotulo),
+      criarElemento(
+        'div',
+        { classe: 'flex items-center justify-between gap-3' },
+        criarElemento(
+          'div',
+          { classe: 'relative w-32' },
+          criarElemento('span', { classe: 'pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-label-md text-outline', texto: 'R$' }),
+          preco,
+        ),
+        quantidade.elemento,
+      ),
     );
 
-    return { item, checkbox, preco: preco.input, quantidade: quantidade.input, elemento };
+    return { item, checkbox, preco, quantidade, elemento };
   };
 
   const mostrarRegistro = (registro) => {

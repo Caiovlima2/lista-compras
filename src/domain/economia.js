@@ -1,9 +1,6 @@
 import { calcularPrecoBase } from '../utils/calculos.js';
-import { normalizarTexto } from '../utils/texto.js';
-import { calcularPrecoBaseDoItem } from './item.js';
+import { calcularPrecoBaseDoItem, chaveDoItem } from './item.js';
 import { estaNoCarrinho } from './lista.js';
-
-const chaveDoItem = ({ nome, marca }) => `${normalizarTexto(nome)}|${normalizarTexto(marca)}`;
 
 /**
  * Mapa "nome|marca" -> último item salvo no histórico.

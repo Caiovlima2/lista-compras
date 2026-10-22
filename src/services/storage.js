@@ -4,6 +4,7 @@ const CHAVES = {
   historico: 'lista-compras-historico',
   sessao: 'lista-compras-sessao',
   tema: 'lista-compras-tema',
+  preferencias: 'lista-compras-preferencias',
 };
 
 function ler(chave, valorPadrao) {
@@ -34,3 +35,6 @@ export const salvarSessao = (sessao) => gravar(CHAVES.sessao, sessao);
 
 export const carregarTema = () => ler(CHAVES.tema, null);
 export const salvarTema = (tema) => gravar(CHAVES.tema, tema);
+
+export const carregarPreferencias = () => ler(CHAVES.preferencias, {});
+export const salvarPreferencias = (preferencias) => gravar(CHAVES.preferencias, preferencias);

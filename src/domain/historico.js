@@ -1,14 +1,16 @@
 import { normalizarTexto } from '../utils/texto.js';
 import { gerarId } from '../utils/id.js';
+import { chaveDoItem } from './item.js';
 
 /** Monta o registro da compra a partir dos itens que foram para o carrinho. */
 export function criarRegistroHistorico(itensNoCarrinho, { mercado, inicio, economia, agora = new Date() }) {
-  const itens = itensNoCarrinho.map(({ id, nome, marca, peso, unidade, preco: estimado, compra }) => ({
+  const itens = itensNoCarrinho.map(({ id, nome, marca, peso, unidade, categoria, preco: estimado, compra }) => ({
     id,
     nome,
     marca,
     peso,
     unidade,
+    categoria,
     preco: compra.preco,
     quantidade: compra.quantidade,
     precoEstimado: estimado,
@@ -78,4 +80,26 @@ export function listarSugestoesFrequentes(registros, limite = 8) {
     .sort((a, b) => b.vezes - a.vezes)
     .slice(0, limite)
     .map(({ item }) => item);
+}
+
+/** Último registro de cada produto conhecido (nome + marca), para sugestões e preço anterior. */
+export function listarItensConhecidos(registros) {
+  const conhecidos = new Map();
+  [...registros].sort(porDataCrescente).forEach(({ itens }) => {
+    itens.forEach((item) => conhecidos.set(chaveDoItem(item), item));
+  });
+  return [...conhecidos.values()];
+}
+
+/** Melhor produto conhecido para o texto digitado (começa com o texto, ou contém). */
+export function buscarSugestao(conhecidos, texto) {
+  const busca = normalizarTexto(texto);
+  if (busca.length < 2) return null;
+
+  const nomeDe = (item) => normalizarTexto(`${item.nome} ${item.marca ?? ''}`);
+  return (
+    conhecidos.find((item) => normalizarTexto(item.nome).startsWith(busca)) ??
+    conhecidos.find((item) => nomeDe(item).includes(busca)) ??
+    null
+  );
 }
