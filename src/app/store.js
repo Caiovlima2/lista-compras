@@ -9,6 +9,7 @@ import {
   salvarSessao,
 } from '../services/storage.js';
 import { normalizarItem } from '../domain/item.js';
+import { FILTROS } from '../domain/lista.js';
 import { normalizarSessao } from '../domain/sessao.js';
 
 /**
@@ -24,6 +25,7 @@ export const estado = {
   // Só existem na tela (não são salvos):
   planejando: false, // o usuário já escolheu "planejar com calma"
   aba: 'lista', // aba aberta
+  filtro: FILTROS.TODOS, // filtro da lista no planejamento
 };
 
 // Cada parte do estado que vai para o aparelho, e quem a grava.

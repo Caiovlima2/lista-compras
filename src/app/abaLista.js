@@ -9,7 +9,17 @@ import {
   ordenarRegistrosRecentes,
 } from '../domain/historico.js';
 import { calcularEconomia, calcularCustoBeneficio, criarIndiceHistorico } from '../domain/economia.js';
-import { contarNoCarrinho, encontrarDuplicado, estaNoCarrinho, somarQuantidade } from '../domain/lista.js';
+import {
+  FILTROS,
+  contarNoCarrinho,
+  definirEmCasa,
+  encontrarDuplicado,
+  estaEmCasa,
+  estaNoCarrinho,
+  itensAComprar,
+  itensEmCasa,
+  somarQuantidade,
+} from '../domain/lista.js';
 import { criarSessaoPlanejando, estaComprando, iniciarCompra } from '../domain/sessao.js';
 import { UNIDADE_PADRAO } from '../utils/calculos.js';
 import { memorizar } from '../utils/memorizar.js';
@@ -20,6 +30,7 @@ import { mostrarToast } from '../components/toast.js';
 import { renderizarResumo } from '../components/resumo.js';
 import { renderizarBarraAcao } from '../components/barraAcao.js';
 import { renderizarHeroVazio } from '../components/heroVazio.js';
+import { renderizarFiltroLista } from '../components/filtroLista.js';
 import { renderizarLista } from '../components/listaItens.js';
 import { renderizarHistorico } from '../components/historico.js';
 import { renderizarComparativo } from '../components/comparativo.js';
@@ -60,6 +71,7 @@ export function iniciarAbaLista() {
     sugestoesBloco: $('#sugestoes-bloco'),
     secaoLista: $('#secao-lista'),
     tituloLista: $('#titulo-lista'),
+    filtroLista: $('#filtro-lista'),
     lista: $('#lista'),
     usarAnterior: $('#usar-anterior'),
     alternarAgrupar: $('#alternar-agrupar'),
@@ -143,6 +155,14 @@ export function iniciarAbaLista() {
     }
   }
 
+  function alternarEmCasa(id) {
+    const item = buscarItem(id);
+    const emCasa = !estaEmCasa(item);
+    aplicarComDesfazer(emCasa ? `"${item.nome}" já está em casa` : `"${item.nome}" voltou para a lista de compra`, {
+      itens: trocarItem(id, (atual) => definirEmCasa(atual, emCasa)),
+    });
+  }
+
   const alterarPrecoCompra = (id, preco) =>
     atualizarEstado({ itens: trocarItem(id, (item) => ({ ...item, compra: { ...item.compra, preco } })) });
 
@@ -153,11 +173,12 @@ export function iniciarAbaLista() {
 
   function salvarEdicao(id, { preco, quantidade, ...resto }) {
     atualizarEstado({
-      itens: trocarItem(id, (item) =>
-        estaNoCarrinho(item)
+      itens: trocarItem(id, (item) => {
+        const editado = estaNoCarrinho(item)
           ? { ...item, ...resto, compra: { preco: preco ?? item.compra.preco, quantidade } }
-          : { ...item, ...resto, preco, quantidade },
-      ),
+          : { ...item, ...resto, preco, quantidade };
+        return definirEmCasa(editado, resto.jaTenho);
+      }),
     });
   }
 
@@ -168,7 +189,7 @@ export function iniciarAbaLista() {
 
   const abrirFinalizacao = () => {
     const economia = calcularEconomia(estado.itens, indiceDoHistorico(estado.registros));
-    sheetFinalizar.abrir({ itens: estado.itens, sessao: estado.sessao, economia });
+    sheetFinalizar.abrir({ itens: itensAComprar(estado.itens), sessao: estado.sessao, economia });
   };
 
   function finalizarCompra() {
@@ -206,8 +227,11 @@ export function iniciarAbaLista() {
     const ultimoRegistro = registroMaisRecente(estado.registros);
     const mostrarHero = !emCompra && estado.itens.length === 0 && !estado.planejando;
     const naAbaLista = estado.aba === 'lista';
+    const aComprar = itensAComprar(estado.itens);
+    const emCasa = itensEmCasa(estado.itens);
+    const filtro = emCasa.length === 0 ? FILTROS.TODOS : estado.filtro;
 
-    renderizarResumo(elementos.resumo, { itens: estado.itens, sessao: estado.sessao, comprando: emCompra, economia });
+    renderizarResumo(elementos.resumo, { itens: aComprar, emCasa: emCasa.length, sessao: estado.sessao, comprando: emCompra, economia });
     renderizarHeroVazio(elementos.heroVazio, {
       visivel: mostrarHero,
       ultimoRegistro,
@@ -226,16 +250,24 @@ export function iniciarAbaLista() {
     elementos.secaoForm.classList.toggle('hidden', mostrarHero);
     elementos.secaoLista.classList.toggle('hidden', mostrarHero);
     elementos.tituloForm.textContent = emCompra ? 'Adição rápida no corredor' : 'Novo item';
-    elementos.tituloLista.textContent = emCompra ? `No mercado · ${contarNoCarrinho(estado.itens)}/${estado.itens.length}` : 'Lista atual';
+    elementos.tituloLista.textContent = emCompra ? `No mercado · ${contarNoCarrinho(aComprar)}/${aComprar.length}` : 'Lista atual';
     elementos.alternarAgrupar.checked = Boolean(estado.preferencias.agrupar);
     formItem.definirModo(emCompra);
+
+    renderizarFiltroLista(elementos.filtroLista, {
+      visivel: !emCompra && emCasa.length > 0,
+      filtro,
+      contagens: { [FILTROS.TODOS]: estado.itens.length, [FILTROS.A_COMPRAR]: aComprar.length, [FILTROS.EM_CASA]: emCasa.length },
+      aoEscolher: (escolhido) => atualizarEstado({ filtro: escolhido }),
+    });
 
     renderizarLista(elementos.lista, {
       itens: estado.itens,
       comprando: emCompra,
       agrupar: Boolean(estado.preferencias.agrupar),
+      filtro,
       indiceHistorico,
-      acoes: { alterarQuantidade, alternarCarrinho, alterarPrecoCompra, pegar, editar: (id) => sheetEditar.abrir(buscarItem(id)), remover: removerItem },
+      acoes: { alterarQuantidade, alternarCarrinho, alternarEmCasa, alterarPrecoCompra, pegar, editar: (id) => sheetEditar.abrir(buscarItem(id)), remover: removerItem },
     });
 
     const naLista = new Set(estado.itens.map(chaveDoItem));

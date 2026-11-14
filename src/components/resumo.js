@@ -16,10 +16,11 @@ const coluna = (rotulo, valor, classeValor = '') =>
     criarElemento('p', { classe: `text-headline-md tabular-nums ${classeValor}`.trim(), texto: valor }),
   );
 
-function resumoPlanejando(itens) {
+function resumoPlanejando(itens, emCasa) {
   const semPreco = contarSemPreco(itens);
   const detalhe = [`${itens.length} ${itens.length === 1 ? 'item' : 'itens'}`];
   if (semPreco > 0) detalhe.push(`${semPreco} sem preço`);
+  if (emCasa > 0) detalhe.push(`${emCasa} já em casa`);
 
   return criarElemento(
     'div',
@@ -104,9 +105,10 @@ function resumoComprando(itens, sessao, economia) {
   );
 }
 
-export function renderizarResumo(container, { itens, sessao, comprando, economia }) {
-  container.classList.toggle('hidden', !comprando && itens.length === 0);
-  container.replaceChildren(comprando ? resumoComprando(itens, sessao, economia) : resumoPlanejando(itens));
+/** `itens` são só os que precisam ser comprados; `emCasa` é quantos já existem na despensa. */
+export function renderizarResumo(container, { itens, emCasa, sessao, comprando, economia }) {
+  container.classList.toggle('hidden', !comprando && itens.length === 0 && emCasa === 0);
+  container.replaceChildren(comprando ? resumoComprando(itens, sessao, economia) : resumoPlanejando(itens, emCasa));
 }
 
 /** Atualiza o cronômetro do modo mercado a cada segundo. */

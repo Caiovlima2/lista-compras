@@ -134,7 +134,8 @@
             <input id="alternar-agrupar" type="checkbox" role="switch" class="peer sr-only" />
             <span class="relative h-6 w-11 rounded-full bg-outline-variant transition after:absolute after:top-0.5 after:left-0.5 after:size-5 after:rounded-full after:bg-surface-container-lowest after:transition peer-checked:bg-primary peer-checked:after:translate-x-5 peer-focus-visible:outline-2 peer-focus-visible:outline-primary"></span>
           </label>
-          <ul id="lista" class="space-y-3"></ul>
+          <div id="filtro-lista" class="mb-3 hidden flex-wrap gap-2 [&:not(.hidden)]:flex" role="group" aria-label="Filtrar lista"></div>
+        <ul id="lista" class="space-y-3"></ul>
         </section>
 
         <!-- Comparativo mensal -->
@@ -192,6 +193,18 @@
           <button type="button" data-fechar class="btn btn-ghost size-12 min-h-0 p-0" aria-label="Fechar">
             <span class="material-symbols-outlined">close</span>
           </button>
+        </div>
+
+        <div>
+          <label class="flex min-h-14 cursor-pointer items-center justify-between gap-3 rounded-lg bg-primary-fixed/50 px-4 text-label-lg">
+            <span class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary" aria-hidden="true">inventory_2</span>
+              Já tenho em casa
+            </span>
+            <input id="editar-ja-tenho" name="jaTenho" type="checkbox" role="switch" class="peer sr-only" />
+            <span class="relative h-6 w-11 rounded-full bg-outline-variant transition after:absolute after:top-0.5 after:left-0.5 after:size-5 after:rounded-full after:bg-surface-container-lowest after:transition peer-checked:bg-primary peer-checked:after:translate-x-5 peer-focus-visible:outline-2 peer-focus-visible:outline-primary"></span>
+          </label>
+          <p class="mt-1 px-1 text-body-sm text-on-surface-variant">Fica na lista, mas não entra na soma nem no modo mercado.</p>
         </div>
 
         <div>

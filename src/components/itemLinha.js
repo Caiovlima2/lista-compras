@@ -11,7 +11,7 @@ import {
 } from '../utils/formatadores.js';
 import { aplicarMascaraPreco } from '../utils/mascaraPreco.js';
 import { lerNumero } from '../utils/numero.js';
-import { calcularDiferencaDoItem, calcularSubtotalExibido, estaNoCarrinho } from '../domain/lista.js';
+import { calcularDiferencaDoItem, calcularSubtotalExibido, estaEmCasa, estaNoCarrinho } from '../domain/lista.js';
 import { calcularPrecoBaseDoItem } from '../domain/item.js';
 import { criarStepper } from './stepper.js';
 
@@ -26,6 +26,7 @@ function criarDetalhe(item) {
 function criarSelos(item, percentualCustoBeneficio) {
   const diferenca = calcularDiferencaDoItem(item);
   return [
+    estaEmCasa(item) ? criarElemento('span', { classe: 'badge-bom' }, icone('done_all', 'text-sm'), 'Já tenho em casa') : null,
     percentualCustoBeneficio
       ? criarElemento('span', { classe: 'badge-bom' }, icone('thumb_up', 'text-sm'), `Mais barato ${formatarVariacao(-percentualCustoBeneficio)}`)
       : null,
@@ -37,6 +38,15 @@ function criarSelos(item, percentualCustoBeneficio) {
 }
 
 function criarColunaPreco(item) {
+  // Em casa: não entra na soma. Mostra zero e o preço estimado riscado.
+  if (estaEmCasa(item)) {
+    return criarElemento(
+      'div',
+      { classe: 'shrink-0 text-right' },
+      criarElemento('p', { classe: 'text-headline-sm tabular-nums', texto: formatarPreco(0) }),
+      item.preco !== null ? criarElemento('p', { classe: 'text-body-sm text-outline line-through', texto: formatarPreco(calcularSubtotalExibido(item)) }) : null,
+    );
+  }
   const semPreco = item.preco === null && !estaNoCarrinho(item);
   const noCarrinho = estaNoCarrinho(item);
   return criarElemento(
@@ -61,7 +71,7 @@ export function criarLinhaPlanejamento(item, { custoBeneficio, acoes }) {
 
   return criarElemento(
     'li',
-    { classe: 'card space-y-2 p-3 pl-4' },
+    { classe: `card space-y-2 p-3 pl-4 ${estaEmCasa(item) ? 'opacity-75' : ''}` },
     criarElemento(
       'div',
       { classe: 'flex items-start gap-3' },
@@ -83,13 +93,27 @@ export function criarLinhaPlanejamento(item, { custoBeneficio, acoes }) {
       { classe: 'flex items-center justify-between border-t border-outline-variant pt-2' },
       stepper.elemento,
       criarElemento(
-        'button',
-        {
-          classe: 'btn btn-ghost size-12 min-h-0 p-0 text-error',
-          atributos: { type: 'button', 'aria-label': `Remover ${item.nome}` },
-          aoClicar: () => acoes.remover(item.id),
-        },
-        icone('delete'),
+        'div',
+        { classe: 'flex items-center gap-1' },
+        criarElemento(
+          'button',
+          {
+            classe: `btn min-h-12 px-3 ${estaEmCasa(item) ? 'btn-primary' : 'btn-tonal'}`,
+            atributos: { type: 'button', 'aria-pressed': String(estaEmCasa(item)) },
+            aoClicar: () => acoes.alternarEmCasa(item.id),
+          },
+          icone(estaEmCasa(item) ? 'check_circle' : 'inventory_2'),
+          'Já tenho',
+        ),
+        criarElemento(
+          'button',
+          {
+            classe: 'btn btn-ghost size-12 min-h-0 p-0 text-error',
+            atributos: { type: 'button', 'aria-label': `Remover ${item.nome}` },
+            aoClicar: () => acoes.remover(item.id),
+          },
+          icone('delete'),
+        ),
       ),
     ),
   );

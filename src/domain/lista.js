@@ -2,6 +2,19 @@ import { chaveDoItem } from './item.js';
 
 export const estaNoCarrinho = (item) => item.compra !== null;
 
+/** Filtros da lista no planejamento. */
+export const FILTROS = { TODOS: 'todos', A_COMPRAR: 'aComprar', EM_CASA: 'emCasa' };
+
+export const estaEmCasa = (item) => item.jaTenho === true;
+
+/** Itens que realmente precisam ser comprados (entram nos totais e no modo mercado). */
+export const itensAComprar = (itens) => itens.filter((item) => !estaEmCasa(item));
+
+export const itensEmCasa = (itens) => itens.filter(estaEmCasa);
+
+/** Marca ou desmarca "já tenho". Um item que já está em casa não pode estar no carrinho. */
+export const definirEmCasa = (item, emCasa) => ({ ...item, jaTenho: emCasa, compra: emCasa ? null : item.compra });
+
 const subtotalPrevisto = (item) => (item.preco ?? 0) * item.quantidade;
 const subtotalPago = (item) => (item.compra ? item.compra.preco * item.compra.quantidade : 0);
 

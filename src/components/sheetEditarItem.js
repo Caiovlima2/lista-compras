@@ -9,7 +9,7 @@ import { criarStepper } from './stepper.js';
 import { lerChip, renderizarChips, selecionarChip } from './seletorChips.js';
 import { abrirSheet, configurarFechamento } from './sheet.js';
 
-/** Sheet "Editar item": corrige nome, marca, preço, quantidade, medida e categoria. */
+/** Sheet "Editar item": corrige nome, marca, preço, quantidade, medida, categoria e "já tenho". */
 export function iniciarSheetEditarItem({ dialog, aoSalvar, aoExcluir, obterCustoBeneficio }) {
   const formulario = dialog.querySelector('#form-editar');
   const campos = formulario.elements;
@@ -36,6 +36,7 @@ export function iniciarSheetEditarItem({ dialog, aoSalvar, aoExcluir, obterCusto
     peso: lerNumero(campos.peso.value),
     unidade: lerChip(unidades),
     categoria: lerChip(categorias),
+    jaTenho: campos.jaTenho.checked,
   });
 
   const atualizarResumo = () => {
@@ -85,6 +86,7 @@ export function iniciarSheetEditarItem({ dialog, aoSalvar, aoExcluir, obterCusto
       stepper.definir(noCarrinho ? item.compra.quantidade : item.quantidade);
       selecionarChip(unidades, item.unidade);
       selecionarChip(categorias, item.categoria ?? '');
+      campos.jaTenho.checked = Boolean(item.jaTenho);
       atualizarResumo();
       abrirSheet(dialog);
     },
