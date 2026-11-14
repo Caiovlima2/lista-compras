@@ -1,4 +1,4 @@
-import { calcularPrecoBase } from '../utils/calculos.js';
+import { UNIDADE_PADRAO, calcularPrecoBase } from '../utils/calculos.js';
 import { normalizarTexto } from '../utils/texto.js';
 import { gerarId } from '../utils/id.js';
 
@@ -8,7 +8,7 @@ import { gerarId } from '../utils/id.js';
  * - compra: null enquanto não está no carrinho; depois { preco, quantidade } reais
  * - categoria: opcional ('' = sem categoria)
  */
-export function criarItem({ nome, marca = '', preco = null, peso = null, unidade = 'g', quantidade = 1, categoria = '' }) {
+export function criarItem({ nome, marca = '', preco = null, peso = null, unidade = UNIDADE_PADRAO, quantidade = 1, categoria = '' }) {
   return {
     id: gerarId(),
     nome: nome.trim(),
@@ -22,6 +22,9 @@ export function criarItem({ nome, marca = '', preco = null, peso = null, unidade
   };
 }
 
+// Itens salvos antes de existir a unidade "un" eram medidos em gramas.
+const UNIDADE_LEGADA = 'g';
+
 /** Garante o formato atual em dados salvos por versões anteriores do app. */
 export function normalizarItem(bruto) {
   const { comprado, precoBase, rotuloBase, mercado, ...item } = bruto;
@@ -31,7 +34,7 @@ export function normalizarItem(bruto) {
     marca: '',
     preco: null,
     peso: null,
-    unidade: 'g',
+    unidade: UNIDADE_LEGADA,
     quantidade: 1,
     categoria: '',
     ...item,

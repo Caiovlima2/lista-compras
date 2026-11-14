@@ -15,3 +15,6 @@ export function agruparPorCategoria(itens) {
     .filter(([, lista]) => lista.length > 0)
     .map(([categoria, lista]) => ({ categoria, rotulo: categoria || SEM_CATEGORIA, itens: lista }));
 }
+
+/** Opções dos seletores de categoria ("Nenhuma" primeiro). */
+export const OPCOES_CATEGORIA = [{ valor: '', rotulo: 'Nenhuma' }, ...CATEGORIAS.map((categoria) => ({ valor: categoria, rotulo: categoria }))];

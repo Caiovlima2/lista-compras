@@ -29,15 +29,11 @@
     <!-- Topo -->
     <header class="sticky top-0 z-30 border-b border-outline-variant bg-surface-container-lowest/90 backdrop-blur">
       <div class="mx-auto flex h-16 max-w-3xl items-center justify-between px-4">
-        <a href="#topo" class="flex items-center gap-2 text-headline-sm text-primary">
+        <a href="#lista" class="flex items-center gap-2 text-headline-sm text-primary">
           <span class="material-symbols-outlined">shopping_basket</span>
           Lista de Compras
         </a>
-        <nav class="hidden items-center gap-1 md:flex" aria-label="Seções">
-          <a class="btn btn-ghost min-h-10" href="#secao-lista">Lista</a>
-          <a class="btn btn-ghost min-h-10" href="#secao-comparativo">Comparativo</a>
-          <a class="btn btn-ghost min-h-10" href="#secao-historico">Histórico</a>
-        </nav>
+        <nav id="abas-topo" class="hidden items-center gap-1 md:flex" aria-label="Abas"></nav>
         <button id="alternar-tema" type="button" class="btn btn-ghost size-12 min-h-0 p-0" aria-label="Alternar modo escuro">
           <span class="material-symbols-outlined" id="icone-tema">dark_mode</span>
         </button>
@@ -50,126 +46,123 @@
     <main id="topo" class="mx-auto max-w-3xl space-y-6 px-4 pt-6 pb-56 md:pb-40">
       <div id="banner-instalar"></div>
 
-      <!-- Resumo: muda conforme a fase (planejando / comprando) -->
-      <section id="resumo" aria-live="polite"></section>
+      <!-- Aba Lista -->
+      <div id="aba-lista" class="space-y-6">
+        <!-- Resumo: muda conforme a fase (planejando / comprando) -->
+        <section id="resumo" aria-live="polite"></section>
 
-      <!-- Lista vazia: duas formas de começar -->
-      <section id="hero-vazio" class="hidden"></section>
+        <!-- Lista vazia: duas formas de começar -->
+        <section id="hero-vazio" class="hidden"></section>
 
-      <!-- Adicionar item (planejando e no mercado) -->
-      <section id="secao-form" class="card p-4">
-        <h2 id="titulo-form" class="mb-3 text-headline-sm">Novo item</h2>
+        <!-- Adicionar item (planejando e no mercado) -->
+        <section id="secao-form" class="card p-4">
+          <h2 id="titulo-form" class="mb-3 text-headline-sm">Novo item</h2>
 
-        <div id="sugestoes-bloco" class="mb-4 hidden">
-          <p class="rotulo">Comprados com frequência (toque para adicionar)</p>
-          <div id="sugestoes" class="flex flex-wrap gap-2"></div>
-        </div>
-
-        <form id="form-item" class="space-y-3" autocomplete="off">
-          <div>
-            <label class="rotulo" for="nome">Item</label>
-            <input class="campo" id="nome" name="nome" required placeholder="Ex.: Arroz" enterkeyhint="next" />
+          <div id="sugestoes-bloco" class="mb-4 hidden">
+            <p class="rotulo">Comprados com frequência (toque para adicionar)</p>
+            <div id="sugestoes" class="flex flex-wrap gap-2"></div>
           </div>
 
-          <div id="sugestao-preco"></div>
+          <form id="form-item" class="space-y-3" autocomplete="off">
+            <div>
+              <label class="rotulo" for="nome">Item</label>
+              <input class="campo" id="nome" name="nome" required placeholder="Ex.: Arroz" enterkeyhint="next" />
+            </div>
 
-          <div class="grid grid-cols-[1fr_auto] items-end gap-3">
-            <div>
-              <label class="rotulo" for="preco">Preço (R$)</label>
-              <input class="campo" id="preco" name="preco" inputmode="decimal" placeholder="Opcional" />
+            <div id="sugestao-preco"></div>
+
+            <div class="grid grid-cols-[1fr_auto] items-end gap-3">
+              <div>
+                <label class="rotulo" for="preco">Preço (R$)</label>
+                <input class="campo" id="preco" name="preco" inputmode="decimal" placeholder="Opcional" />
+              </div>
+              <div>
+                <span class="rotulo">Quantidade</span>
+                <div id="quantidade-stepper"></div>
+              </div>
             </div>
-            <div>
-              <span class="rotulo">Quantidade</span>
-              <div id="quantidade-stepper"></div>
-            </div>
+
+            <details id="mais-detalhes" class="rounded-md border border-outline-variant">
+              <summary class="flex min-h-12 cursor-pointer items-center gap-2 px-3 text-label-lg text-primary">
+                <span class="material-symbols-outlined">tune</span>
+                Mais detalhes (marca, peso e categoria)
+              </summary>
+              <div class="grid grid-cols-2 gap-3 p-3 pt-0">
+                <div class="col-span-2">
+                  <label class="rotulo" for="marca">Marca</label>
+                  <input class="campo" id="marca" name="marca" placeholder="Opcional" />
+                </div>
+                <div>
+                  <label class="rotulo" for="peso">Peso / vol. / un.</label>
+                  <input class="campo" id="peso" name="peso" inputmode="decimal" placeholder="Ex.: 500 ou 12" />
+                </div>
+                <div>
+                  <label class="rotulo" for="unidade">Unidade</label>
+                  <select class="campo" id="unidade" name="unidade"></select>
+                </div>
+                <div class="col-span-2">
+                  <span class="rotulo">Categoria (opcional)</span>
+                  <div id="categorias-form" class="flex flex-wrap gap-2"></div>
+                </div>
+              </div>
+            </details>
+
+            <p class="min-h-5 text-body-sm text-on-surface-variant">
+              <output id="previa"></output>
+            </p>
+
+            <button class="btn btn-primary w-full" type="submit">
+              <span class="material-symbols-outlined">add_shopping_cart</span>
+              <span id="rotulo-adicionar">Adicionar à lista</span>
+            </button>
+
+            <div id="aviso-duplicado"></div>
+          </form>
+        </section>
+
+        <!-- Lista atual -->
+        <section id="secao-lista" class="scroll-mt-20">
+          <div class="mb-3 flex items-center justify-between gap-3">
+            <h2 class="text-headline-md" id="titulo-lista">Lista atual</h2>
+            <button id="usar-anterior" type="button" class="btn btn-tonal min-h-10 px-4">
+              <span class="material-symbols-outlined">content_copy</span>
+              Usar lista anterior
+            </button>
           </div>
+          <label class="mb-3 flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-lg border border-outline-variant bg-surface-container-lowest px-4 text-label-lg">
+            Agrupar por categoria
+            <input id="alternar-agrupar" type="checkbox" role="switch" class="peer sr-only" />
+            <span class="relative h-6 w-11 rounded-full bg-outline-variant transition after:absolute after:top-0.5 after:left-0.5 after:size-5 after:rounded-full after:bg-surface-container-lowest after:transition peer-checked:bg-primary peer-checked:after:translate-x-5 peer-focus-visible:outline-2 peer-focus-visible:outline-primary"></span>
+          </label>
+          <ul id="lista" class="space-y-3"></ul>
+        </section>
 
-          <details id="mais-detalhes" class="rounded-md border border-outline-variant">
-            <summary class="flex min-h-12 cursor-pointer items-center gap-2 px-3 text-label-lg text-primary">
-              <span class="material-symbols-outlined">tune</span>
-              Mais detalhes (marca, peso e categoria)
-            </summary>
-            <div class="grid grid-cols-2 gap-3 p-3 pt-0">
-              <div class="col-span-2">
-                <label class="rotulo" for="marca">Marca</label>
-                <input class="campo" id="marca" name="marca" placeholder="Opcional" />
-              </div>
-              <div>
-                <label class="rotulo" for="peso">Peso / vol. / un.</label>
-                <input class="campo" id="peso" name="peso" inputmode="decimal" placeholder="Ex.: 500 ou 12" />
-              </div>
-              <div>
-                <label class="rotulo" for="unidade">Unidade</label>
-                <select class="campo" id="unidade" name="unidade"></select>
-              </div>
-              <div class="col-span-2">
-                <span class="rotulo">Categoria (opcional)</span>
-                <div id="categorias-form" class="flex flex-wrap gap-2"></div>
-              </div>
-            </div>
-          </details>
+        <!-- Comparativo mensal -->
+        <section id="secao-comparativo" class="scroll-mt-20">
+          <h2 class="mb-3 text-headline-md">Comparativo mensal</h2>
+          <ul id="comparativo" class="space-y-3"></ul>
+        </section>
 
-          <p class="min-h-5 text-body-sm text-on-surface-variant">
-            <output id="previa"></output>
-          </p>
+        <!-- Histórico -->
+        <section id="secao-historico" class="scroll-mt-20">
+          <div class="mb-3 flex items-baseline justify-between">
+            <h2 class="text-headline-md">Listas salvas</h2>
+            <span id="contador-historico" class="text-body-sm text-on-surface-variant"></span>
+          </div>
+          <div id="historico" class="space-y-3"></div>
+        </section>
+      </div>
 
-          <button class="btn btn-primary w-full" type="submit">
-            <span class="material-symbols-outlined">add_shopping_cart</span>
-            <span id="rotulo-adicionar">Adicionar à lista</span>
-          </button>
-
-          <div id="aviso-duplicado"></div>
-        </form>
-      </section>
-
-      <!-- Lista atual -->
-      <section id="secao-lista" class="scroll-mt-20">
-        <div class="mb-3 flex items-center justify-between gap-3">
-          <h2 class="text-headline-md" id="titulo-lista">Lista atual</h2>
-          <button id="usar-anterior" type="button" class="btn btn-tonal min-h-10 px-4">
-            <span class="material-symbols-outlined">content_copy</span>
-            Usar lista anterior
-          </button>
-        </div>
-        <label class="mb-3 flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-lg border border-outline-variant bg-surface-container-lowest px-4 text-label-lg">
-          Agrupar por categoria
-          <input id="alternar-agrupar" type="checkbox" role="switch" class="peer sr-only" />
-          <span class="relative h-6 w-11 rounded-full bg-outline-variant transition after:absolute after:top-0.5 after:left-0.5 after:size-5 after:rounded-full after:bg-surface-container-lowest after:transition peer-checked:bg-primary peer-checked:after:translate-x-5 peer-focus-visible:outline-2 peer-focus-visible:outline-primary"></span>
-        </label>
-        <ul id="lista" class="space-y-3"></ul>
-      </section>
-
-      <!-- Comparativo mensal -->
-      <section id="secao-comparativo" class="scroll-mt-20">
-        <h2 class="mb-3 text-headline-md">Comparativo mensal</h2>
-        <ul id="comparativo" class="space-y-3"></ul>
-      </section>
-
-      <!-- Histórico -->
-      <section id="secao-historico" class="scroll-mt-20">
-        <div class="mb-3 flex items-baseline justify-between">
-          <h2 class="text-headline-md">Listas salvas</h2>
-          <span id="contador-historico" class="text-body-sm text-on-surface-variant"></span>
-        </div>
-        <div id="historico" class="space-y-3"></div>
-      </section>
+      <!-- Abas em construção: o conteúdo é desenhado por src/main.js -->
+      <section id="aba-eventos" class="hidden"></section>
+      <section id="aba-receitas" class="hidden"></section>
     </main>
 
     <!-- Barra fixa: avisos, ação principal e navegação (celular) -->
     <div class="fixed inset-x-0 bottom-0 z-30 border-t border-outline-variant bg-surface-container-lowest/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
       <div id="toast" class="absolute inset-x-0 bottom-full mb-3 mx-auto max-w-3xl"></div>
       <div id="barra-acao" class="mx-auto flex max-w-3xl gap-3 px-4 py-3"></div>
-      <nav class="mx-auto grid max-w-3xl grid-cols-3 border-t border-outline-variant md:hidden" aria-label="Seções">
-        <a class="flex flex-col items-center py-2 text-label-md text-on-surface-variant" href="#secao-lista">
-          <span class="material-symbols-outlined">checklist</span>Lista
-        </a>
-        <a class="flex flex-col items-center py-2 text-label-md text-on-surface-variant" href="#secao-comparativo">
-          <span class="material-symbols-outlined">monitoring</span>Comparativo
-        </a>
-        <a class="flex flex-col items-center py-2 text-label-md text-on-surface-variant" href="#secao-historico">
-          <span class="material-symbols-outlined">history</span>Histórico
-        </a>
-      </nav>
+      <nav id="abas-rodape" class="mx-auto grid max-w-3xl grid-cols-3 border-t border-outline-variant md:hidden" aria-label="Abas"></nav>
     </div>
 
     <!-- Sheet: onde você vai comprar? -->

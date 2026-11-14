@@ -2,7 +2,7 @@ import { criarElemento, icone } from '../utils/dom.js';
 
 /** Botões fixos no rodapé: mudam conforme a fase da lista. */
 export function renderizarBarraAcao(container, { comprando, visivel, aoComecar, aoFinalizar, aoVoltar }) {
-  container.style.display = visivel || comprando ? '' : 'none';
+  container.style.display = visivel ? '' : 'none';
 
   if (!comprando) {
     container.replaceChildren(

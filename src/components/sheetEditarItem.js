@@ -4,7 +4,7 @@ import { formatarCampoPreco, formatarPreco, formatarPrecoBase } from '../utils/f
 import { aplicarMascaraPreco } from '../utils/mascaraPreco.js';
 import { lerNumero } from '../utils/numero.js';
 import { estaNoCarrinho } from '../domain/lista.js';
-import { OPCOES_CATEGORIA } from './formItem.js';
+import { OPCOES_CATEGORIA } from '../domain/categorias.js';
 import { criarStepper } from './stepper.js';
 import { lerChip, renderizarChips, selecionarChip } from './seletorChips.js';
 import { abrirSheet, configurarFechamento } from './sheet.js';

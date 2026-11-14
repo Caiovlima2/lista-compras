@@ -3,11 +3,9 @@ import { UNIDADES, calcularPrecoBase } from '../utils/calculos.js';
 import { formatarCampoPreco, formatarPreco, formatarPrecoBase } from '../utils/formatadores.js';
 import { aplicarMascaraPreco } from '../utils/mascaraPreco.js';
 import { lerNumero } from '../utils/numero.js';
-import { CATEGORIAS } from '../domain/categorias.js';
+import { OPCOES_CATEGORIA } from '../domain/categorias.js';
 import { criarStepper } from './stepper.js';
 import { lerChip, renderizarChips, selecionarChip } from './seletorChips.js';
-
-export const OPCOES_CATEGORIA = [{ valor: '', rotulo: 'Nenhuma' }, ...CATEGORIAS.map((c) => ({ valor: c, rotulo: c }))];
 
 /**
  * Formulário usado no planejamento e no modo mercado.
