@@ -63,3 +63,9 @@ export function somarQuantidade(item, quantidade) {
     ? { ...item, compra: { ...item.compra, quantidade: item.compra.quantidade + quantidade } }
     : { ...item, quantidade: item.quantidade + quantidade };
 }
+
+/** Separa os itens novos que podem entrar na lista dos que já existem (mesmo nome e marca). */
+export function separarRepetidos(itensDaLista, novos) {
+  const aAdicionar = novos.filter((novo) => !encontrarDuplicado(itensDaLista, novo));
+  return { aAdicionar, repetidos: novos.length - aAdicionar.length };
+}

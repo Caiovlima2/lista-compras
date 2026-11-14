@@ -3,6 +3,7 @@ import { registerSW } from 'virtual:pwa-register';
 
 import { iniciarAbaEventos } from './app/abaEventos.js';
 import { iniciarAbaLista } from './app/abaLista.js';
+import { iniciarAbaReceitas } from './app/abaReceitas.js';
 import { atualizarEstado, estado } from './app/store.js';
 
 import { iniciarTema } from './components/temaToggle.js';
@@ -11,7 +12,6 @@ import { iniciarStatusConexao } from './components/statusConexao.js';
 import { iniciarBannerInstalar } from './components/bannerInstalar.js';
 import { iniciarRelogio } from './components/resumo.js';
 import { iniciarAbas } from './components/abas.js';
-import { renderizarEmBreve } from './components/abaEmBreve.js';
 
 const $ = (seletor) => document.querySelector(seletor);
 
@@ -37,11 +37,7 @@ registerSW({ immediate: true, onOfflineReady: () => mostrarToast({ mensagem: 'Pr
 iniciarAbaLista();
 
 iniciarAbaEventos();
-renderizarEmBreve($('#aba-receitas'), {
-  nomeIcone: 'menu_book',
-  titulo: 'Receitas',
-  texto: 'Em breve: guarde suas receitas e transforme em lista de compras.',
-});
+iniciarAbaReceitas();
 
 iniciarAbas({
   abas: ABAS,

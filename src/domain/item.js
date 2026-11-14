@@ -56,3 +56,6 @@ export function calcularPrecoBaseDoItem(item) {
   const preco = item.compra?.preco ?? item.preco;
   return calcularPrecoBase(preco, item.peso, item.unidade);
 }
+
+/** Cria itens a partir de descrições (nome, medida...) marcando de onde vieram: { tipo, nome }. */
+export const criarItensDeOrigem = (descricoes, origem) => descricoes.map((descricao) => ({ ...criarItem(descricao), origem }));

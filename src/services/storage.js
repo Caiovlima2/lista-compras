@@ -6,6 +6,7 @@ const CHAVES = {
   tema: 'lista-compras-tema',
   preferencias: 'lista-compras-preferencias',
   eventos: 'lista-compras-eventos',
+  receitas: 'lista-compras-receitas',
 };
 
 function ler(chave, valorPadrao) {
@@ -42,3 +43,6 @@ export const salvarPreferencias = (preferencias) => gravar(CHAVES.preferencias, 
 
 export const carregarEventos = () => ler(CHAVES.eventos, []);
 export const salvarEventos = (eventos) => gravar(CHAVES.eventos, eventos);
+
+export const carregarReceitas = () => ler(CHAVES.receitas, []);
+export const salvarReceitas = (receitas) => gravar(CHAVES.receitas, receitas);

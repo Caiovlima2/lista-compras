@@ -15,6 +15,9 @@ import { calcularDiferencaDoItem, calcularSubtotalExibido, estaEmCasa, estaNoCar
 import { calcularPrecoBaseDoItem } from '../domain/item.js';
 import { criarStepper } from './stepper.js';
 
+// Ícone do selo de origem, por tipo (churrasco, receita...).
+const ICONES_ORIGEM = { churrasco: 'outdoor_grill', receita: 'menu_book' };
+
 function criarDetalhe(item) {
   const partes = [formatarPesoItem(item)];
   const base = calcularPrecoBaseDoItem(item);
@@ -33,7 +36,7 @@ function criarSelos(item, percentualCustoBeneficio) {
     diferenca !== null && Math.abs(diferenca) >= 0.005
       ? criarElemento('span', { classe: diferenca > 0 ? 'badge-alerta' : 'badge-bom' }, formatarDiferenca(diferenca))
       : null,
-    item.origem ? criarElemento('span', { classe: 'badge-neutro' }, icone('outdoor_grill', 'text-sm'), item.origem.nome) : null,
+    item.origem ? criarElemento('span', { classe: 'badge-neutro' }, icone(ICONES_ORIGEM[item.origem.tipo] ?? 'label', 'text-sm'), item.origem.nome) : null,
     item.categoria ? criarElemento('span', { classe: 'badge-neutro', texto: item.categoria }) : null,
   ];
 }

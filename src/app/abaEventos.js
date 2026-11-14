@@ -7,8 +7,9 @@ import {
   obterDefinicao,
   removerCorte,
 } from '../domain/eventos/evento.js';
-import { criarItensDoEvento, listarItensDoEvento } from '../domain/eventos/paraLista.js';
-import { encontrarDuplicado } from '../domain/lista.js';
+import { listarItensDoEvento } from '../domain/eventos/paraLista.js';
+import { criarItensDeOrigem } from '../domain/item.js';
+import { separarRepetidos } from '../domain/lista.js';
 import { criarElemento, icone } from '../utils/dom.js';
 
 import { renderizarListaEventos } from '../components/eventos/listaEventos.js';
@@ -53,11 +54,10 @@ export function iniciarAbaEventos() {
   function enviarParaLista() {
     const evento = eventoAberto();
     const calculo = calcularEvento(evento, obterDefinicao(evento.tipo));
-    const novos = criarItensDoEvento(listarItensDoEvento(calculo, evento), evento);
+    const novos = criarItensDeOrigem(listarItensDoEvento(calculo, evento), { tipo: evento.tipo, nome: evento.nome });
 
     // Quem já está na lista (mesmo nome e marca) não é duplicado.
-    const aAdicionar = novos.filter((item) => !encontrarDuplicado(estado.itens, item));
-    const repetidos = novos.length - aAdicionar.length;
+    const { aAdicionar, repetidos } = separarRepetidos(estado.itens, novos);
     if (aAdicionar.length === 0) {
       mostrarToast({ mensagem: 'Esses itens já estão na sua lista' });
       return;
