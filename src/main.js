@@ -1,6 +1,7 @@
 import './style.css';
 import { registerSW } from 'virtual:pwa-register';
 
+import { iniciarAbaEventos } from './app/abaEventos.js';
 import { iniciarAbaLista } from './app/abaLista.js';
 import { atualizarEstado, estado } from './app/store.js';
 
@@ -35,11 +36,7 @@ registerSW({ immediate: true, onOfflineReady: () => mostrarToast({ mensagem: 'Pr
 
 iniciarAbaLista();
 
-renderizarEmBreve($('#aba-eventos'), {
-  nomeIcone: 'celebration',
-  titulo: 'Eventos',
-  texto: 'Em breve: calcule o que comprar para o churrasco e envie para a sua lista.',
-});
+iniciarAbaEventos();
 renderizarEmBreve($('#aba-receitas'), {
   nomeIcone: 'menu_book',
   titulo: 'Receitas',

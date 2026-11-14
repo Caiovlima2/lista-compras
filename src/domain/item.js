@@ -7,6 +7,7 @@ import { gerarId } from '../utils/id.js';
  * - preco: preço ESTIMADO por unidade (null = "Preço a definir")
  * - compra: null enquanto não está no carrinho; depois { preco, quantidade } reais
  * - categoria: opcional ('' = sem categoria)
+ * - origem: de onde veio ({ tipo, nome } do evento), ou null quando foi digitado
  * - jaTenho: true = já existe em casa; fica na lista, mas fora do total e do modo mercado
  */
 export function criarItem({ nome, marca = '', preco = null, peso = null, unidade = UNIDADE_PADRAO, quantidade = 1, categoria = '' }) {
@@ -20,6 +21,7 @@ export function criarItem({ nome, marca = '', preco = null, peso = null, unidade
     unidade,
     categoria,
     jaTenho: false,
+    origem: null,
     compra: null,
   };
 }
@@ -40,6 +42,7 @@ export function normalizarItem(bruto) {
     quantidade: 1,
     categoria: '',
     jaTenho: false,
+    origem: null,
     ...item,
     compra,
   };

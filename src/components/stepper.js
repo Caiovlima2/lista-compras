@@ -7,7 +7,7 @@ const formatarValor = (valor) => String(valor).replace('.', ',');
  * Controle [−] 2 [+]. O número do meio também aceita digitação (ex.: 0,5).
  * Dispara um evento "input" ao mudar, para formulários atualizarem prévias.
  */
-export function criarStepper({ valor = 1, minimo = 1, nome, rotulo = 'Quantidade', compacto = false, aoMudar }) {
+export function criarStepper({ valor = 1, minimo = 1, passo = 1, nome, rotulo = 'Quantidade', compacto = false, aoMudar }) {
   const tamanho = compacto ? 'size-9' : 'size-10';
   const campo = criarElemento('input', {
     classe: `${compacto ? 'w-9' : 'w-11'} rounded-md bg-transparent text-center text-body-lg font-bold tabular-nums outline-none focus:bg-surface-container-lowest`,
@@ -44,12 +44,12 @@ export function criarStepper({ valor = 1, minimo = 1, nome, rotulo = 'Quantidade
     aoMudar?.(novoValor);
   };
 
-  menos.addEventListener('click', () => mudar(Math.max(minimo, arredondar((ler() ?? minimo) - 1))));
-  mais.addEventListener('click', () => mudar(arredondar((ler() ?? 0) + 1)));
+  menos.addEventListener('click', () => mudar(Math.max(minimo, arredondar((ler() ?? minimo) - passo))));
+  mais.addEventListener('click', () => mudar(arredondar((ler() ?? 0) + passo)));
 
   campo.addEventListener('change', () => {
     const digitado = ler();
-    mudar(digitado !== null && digitado > 0 ? digitado : minimo);
+    mudar(digitado !== null && (digitado > 0 || (minimo === 0 && digitado === 0)) ? digitado : minimo);
   });
   campo.addEventListener('focus', () => campo.select());
 

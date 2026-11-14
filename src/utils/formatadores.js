@@ -52,3 +52,13 @@ export function formatarCronometro(milissegundos) {
 }
 
 export const formatarMinutos = (milissegundos) => `${Math.max(1, Math.round(milissegundos / 60000))} min`;
+
+/** 700 + "g" -> "700 g"; 1500 + "g" -> "1,5 kg". */
+export function formatarMedida(valor, unidade) {
+  if (unidade === 'g' && valor >= 1000) return `${numero.format(valor / 1000)} kg`;
+  return `${numero.format(valor)} ${unidade}`;
+}
+
+/** Recebe "2026-11-14" (campo de data) e devolve "sáb., 14/11". */
+export const formatarDataEvento = (ymd) =>
+  new Date(`${ymd}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });

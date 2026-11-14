@@ -33,6 +33,7 @@ function criarSelos(item, percentualCustoBeneficio) {
     diferenca !== null && Math.abs(diferenca) >= 0.005
       ? criarElemento('span', { classe: diferenca > 0 ? 'badge-alerta' : 'badge-bom' }, formatarDiferenca(diferenca))
       : null,
+    item.origem ? criarElemento('span', { classe: 'badge-neutro' }, icone('outdoor_grill', 'text-sm'), item.origem.nome) : null,
     item.categoria ? criarElemento('span', { classe: 'badge-neutro', texto: item.categoria }) : null,
   ];
 }

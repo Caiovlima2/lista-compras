@@ -1,13 +1,16 @@
 import {
+  carregarEventos,
   carregarHistorico,
   carregarItens,
   carregarPreferencias,
   carregarSessao,
+  salvarEventos,
   salvarHistorico,
   salvarItens,
   salvarPreferencias,
   salvarSessao,
 } from '../services/storage.js';
+import { normalizarEvento } from '../domain/eventos/evento.js';
 import { normalizarItem } from '../domain/item.js';
 import { FILTROS } from '../domain/lista.js';
 import { normalizarSessao } from '../domain/sessao.js';
@@ -22,10 +25,12 @@ export const estado = {
   registros: carregarHistorico(),
   sessao: normalizarSessao(carregarSessao()),
   preferencias: carregarPreferencias(),
+  eventos: carregarEventos().map(normalizarEvento).filter(Boolean),
   // Só existem na tela (não são salvos):
   planejando: false, // o usuário já escolheu "planejar com calma"
   aba: 'lista', // aba aberta
   filtro: FILTROS.TODOS, // filtro da lista no planejamento
+  eventoAberto: null, // id do evento aberto na aba Eventos
 };
 
 // Cada parte do estado que vai para o aparelho, e quem a grava.
@@ -34,6 +39,7 @@ const PERSISTIDOS = {
   registros: salvarHistorico,
   sessao: salvarSessao,
   preferencias: salvarPreferencias,
+  eventos: salvarEventos,
 };
 
 const ouvintes = new Set();
