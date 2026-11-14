@@ -16,7 +16,7 @@ import { calcularPrecoBaseDoItem } from '../domain/item.js';
 import { criarStepper } from './stepper.js';
 
 // Ícone do selo de origem, por tipo (churrasco, receita...).
-const ICONES_ORIGEM = { churrasco: 'outdoor_grill', receita: 'menu_book' };
+const ICONES_ORIGEM = { churrasco: 'outdoor_grill', receita: 'menu_book', marmitas: 'takeout_dining' };
 
 function criarDetalhe(item) {
   const partes = [formatarPesoItem(item)];

@@ -12,7 +12,7 @@ import {
   salvarReceitas,
   salvarSessao,
 } from '../services/storage.js';
-import { normalizarEvento } from '../domain/eventos/evento.js';
+import { normalizarEventoSalvo } from '../domain/eventos/tipos.js';
 import { normalizarItem } from '../domain/item.js';
 import { FILTROS } from '../domain/lista.js';
 import { normalizarReceita } from '../domain/receitas/receita.js';
@@ -28,7 +28,7 @@ export const estado = {
   registros: carregarHistorico(),
   sessao: normalizarSessao(carregarSessao()),
   preferencias: carregarPreferencias(),
-  eventos: carregarEventos().map(normalizarEvento).filter(Boolean),
+  eventos: carregarEventos().map(normalizarEventoSalvo).filter(Boolean),
   receitas: carregarReceitas().map(normalizarReceita),
   // Só existem na tela (não são salvos):
   planejando: false, // o usuário já escolheu "planejar com calma"

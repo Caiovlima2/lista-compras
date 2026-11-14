@@ -9,9 +9,11 @@ export const obterDefinicao = (tipo) => TIPOS[tipo];
 /**
  * Um evento.
  * - convidados: { [id do tipo de convidado]: quantidade }
- * - cortes: carnes que já existem em casa, sempre em gramas
- * - corteFaltante: nome do corte que será comprado para completar a carne
- * - ajustes: mudanças feitas à mão sobre o cálculo, por item: { quantidade?, emCasa? }
+ * - carnes: ids dos tipos de carne escolhidos (vermelha, frango...)
+ * - cortes: carnes que já existem em casa: { id, nome, gramas, categoria (id do tipo de carne) }
+ * - corteFaltante: { [id do tipo de carne]: nome do corte que será comprado para completar }
+ * - complementos: ids dos complementos que o usuário marcou (pão de alho, arroz...)
+ * - ajustes: mudanças feitas à mão sobre cada ingrediente: { quantidade?, emCasa? }
  */
 export function criarEvento(tipo, agora = new Date()) {
   const definicao = TIPOS[tipo];
@@ -22,8 +24,10 @@ export function criarEvento(tipo, agora = new Date()) {
     data: '',
     duracao: definicao.duracaoPadrao,
     convidados: { ...definicao.convidadosPadrao },
+    carnes: [...definicao.carnesPadrao],
     cortes: [],
-    corteFaltante: '',
+    corteFaltante: {},
+    complementos: [],
     ajustes: {},
     criadoEm: agora.toISOString(),
   };
@@ -35,11 +39,14 @@ export function normalizarEvento(bruto) {
   if (!definicao) return null;
 
   const { id: _id, ...padrao } = criarEvento(bruto.tipo);
+  const tipoPadrao = definicao.carnesPadrao[0];
   return {
     ...padrao,
     ...bruto,
     convidados: { ...definicao.convidadosPadrao, ...bruto.convidados },
-    cortes: bruto.cortes ?? [],
+    // Eventos antigos: todo corte era "carne vermelha" e o corte faltante era um texto só.
+    cortes: (bruto.cortes ?? []).map((corte) => ({ categoria: tipoPadrao, ...corte })),
+    corteFaltante: typeof bruto.corteFaltante === 'string' ? { [tipoPadrao]: bruto.corteFaltante } : (bruto.corteFaltante ?? {}),
     ajustes: bruto.ajustes ?? {},
   };
 }
@@ -62,9 +69,17 @@ export const ajustarItem = (evento, idItem, parcial) => ({
   ajustes: { ...evento.ajustes, [idItem]: { ...evento.ajustes[idItem], ...parcial } },
 });
 
-export const adicionarCorte = (evento, { nome, gramas }) => ({
+export const adicionarCorte = (evento, { nome, gramas, categoria }) => ({
   ...evento,
-  cortes: [...evento.cortes, { id: gerarId(), nome: nome.trim(), gramas }],
+  cortes: [...evento.cortes, { id: gerarId(), nome: nome.trim(), gramas, categoria }],
 });
+
+const alternarEm = (lista, id) => (lista.includes(id) ? lista.filter((atual) => atual !== id) : [...lista, id]);
+
+export const alternarCarne = (evento, idTipo) => ({ ...evento, carnes: alternarEm(evento.carnes, idTipo) });
+
+export const alternarComplemento = (evento, idComplemento) => ({ ...evento, complementos: alternarEm(evento.complementos, idComplemento) });
+
+export const alterarCorteFaltante = (evento, idTipo, nome) => ({ ...evento, corteFaltante: { ...evento.corteFaltante, [idTipo]: nome } });
 
 export const removerCorte = (evento, idCorte) => ({ ...evento, cortes: evento.cortes.filter((corte) => corte.id !== idCorte) });

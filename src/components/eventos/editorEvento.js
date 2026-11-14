@@ -1,6 +1,7 @@
 import { criarElemento, icone } from '../../utils/dom.js';
 import { formatarMedida } from '../../utils/formatadores.js';
 import { lerNumero } from '../../utils/numero.js';
+import { criarMarcador } from '../marcador.js';
 import { criarStepper } from '../stepper.js';
 
 const CHIP_ATIVO = 'border-primary bg-primary text-on-primary';
@@ -95,41 +96,61 @@ export function criarEditorEvento({ definicao, acoes }) {
     ...linhasConvidados,
   );
 
-  /* ---------- Carne ---------- */
+  /* ---------- Tipos de carne (o que vai ao fogo) ---------- */
+  const chipsCarne = definicao.carne.tipos.map(({ id, rotulo, icone: nomeIcone }) => {
+    const botao = criarElemento('button', { atributos: { type: 'button' }, aoClicar: () => acoes.alternarCarne(id) }, icone(nomeIcone, 'text-xl'), rotulo);
+    return { id, botao };
+  });
+
+  const blocoTiposCarne = criarElemento(
+    'section',
+    { classe: 'space-y-2' },
+    criarElemento('div', {}, criarElemento('h3', { classe: 'text-headline-sm', texto: 'O que vai ao fogo?' }), criarElemento('p', { classe: 'text-body-sm text-on-surface-variant', texto: 'A carne total se divide entre os tipos escolhidos.' })),
+    criarElemento('div', { classe: 'flex flex-wrap gap-2' }, ...chipsCarne.map(({ botao }) => botao)),
+  );
+
+  /* ---------- Carne recomendada e quanto falta de cada tipo ---------- */
   const metaTexto = criarElemento('p', { classe: 'text-price-hero tabular-nums' });
   const publicoTexto = criarElemento('p', { classe: 'text-body-md opacity-90' });
-  const progresso = criarElemento('div', { classe: 'h-full rounded-full bg-primary transition-all' });
-  const progressoTexto = criarElemento('p', { classe: 'text-body-sm text-on-surface-variant' });
-  const situacao = criarElemento('div', { classe: 'flex' });
-
-  const campoCorteFaltante = criarElemento('input', {
-    classe: 'campo',
-    atributos: { id: 'evento-corte-faltante', type: 'text', placeholder: 'Ex.: Fraldinha', enterkeyhint: 'done', list: 'cortes-sugeridos' },
-  });
-  campoCorteFaltante.addEventListener('input', () => acoes.alterarCorteFaltante(campoCorteFaltante.value));
-  const blocoCorteFaltante = criarElemento('div', {}, rotuloCampo('Qual corte comprar para completar?', 'evento-corte-faltante'), campoCorteFaltante);
-
   const blocoCarne = criarElemento(
     'section',
-    { classe: 'space-y-3 rounded-lg bg-primary-container p-5 text-on-primary-container' },
+    { classe: 'space-y-1 rounded-lg bg-primary-container p-5 text-on-primary-container' },
     criarElemento('p', { classe: 'text-label-md opacity-90', texto: 'CARNE RECOMENDADA' }),
     metaTexto,
     publicoTexto,
   );
 
-  const cartaoCarne = criarElemento(
-    'section',
-    { classe: 'card space-y-3 p-4' },
-    criarElemento('div', { classe: 'h-3 overflow-hidden rounded-full bg-surface-container-high', atributos: { role: 'presentation' } }, progresso),
-    progressoTexto,
-    situacao,
-    blocoCorteFaltante,
-  );
+  const sugestoes = criarElemento('datalist', { atributos: { id: 'cortes-sugeridos' } });
+  const linhasTipos = new Map();
+  definicao.carne.tipos.forEach(({ id, rotulo, icone: nomeIcone, nomePadrao, cortesSugeridos }) => {
+    const resumo = criarElemento('p', { classe: 'text-body-sm text-on-surface-variant' });
+    const progresso = criarElemento('div', { classe: 'h-full rounded-full bg-primary transition-all' });
+    const situacao = criarElemento('div', { classe: 'flex' });
+    const campoCorte = criarElemento('input', { classe: 'campo', atributos: { id: `corte-faltante-${id}`, type: 'text', placeholder: nomePadrao, enterkeyhint: 'done', list: `sugestoes-${id}` } });
+    campoCorte.addEventListener('input', () => acoes.alterarCorteFaltante(id, campoCorte.value));
+    const dica = criarElemento('p', { classe: 'text-body-sm text-on-surface-variant' });
+    const sugestoesDoTipo = criarElemento('datalist', { atributos: { id: `sugestoes-${id}` } }, ...cortesSugeridos.map((nome) => criarElemento('option', { atributos: { value: nome } })));
+    const blocoCorte = criarElemento('div', {}, rotuloCampo('Qual corte comprar para completar?', `corte-faltante-${id}`), campoCorte, dica, sugestoesDoTipo);
+    const linha = criarElemento(
+      'li',
+      { classe: 'card space-y-2 p-4' },
+      criarElemento('div', { classe: 'flex items-center gap-2' }, icone(nomeIcone, 'text-primary'), criarElemento('h4', { classe: 'text-label-lg', texto: rotulo })),
+      criarElemento('div', { classe: 'h-3 overflow-hidden rounded-full bg-surface-container-high', atributos: { role: 'presentation' } }, progresso),
+      resumo,
+      situacao,
+      blocoCorte,
+    );
+    linhasTipos.set(id, { linha, resumo, progresso, situacao, campoCorte, blocoCorte, dica, nomePadrao });
+  });
+
+  const avisoSemCarne = criarElemento('p', { classe: 'card p-4 text-body-md text-on-surface-variant', texto: 'Escolha pelo menos um tipo de carne para calcular.' });
+  const cartaoCarne = criarElemento('ul', { classe: 'space-y-3' }, ...[...linhasTipos.values()].map(({ linha }) => linha));
 
   /* ---------- Cortes que já tenho ---------- */
   const listaCortes = criarElemento('ul', { classe: 'space-y-2' });
   const cortesTotal = criarElemento('span', { classe: 'text-body-sm text-on-surface-variant' });
 
+  const campoCorteTipo = criarElemento('select', { classe: 'campo', atributos: { id: 'corte-tipo' } });
   const campoCorteNome = criarElemento('input', { classe: 'campo', atributos: { id: 'corte-nome', type: 'text', list: 'cortes-sugeridos', placeholder: 'Ex.: Picanha', required: true } });
   const campoCortePeso = criarElemento('input', { classe: 'campo', atributos: { id: 'corte-peso', inputmode: 'decimal', placeholder: 'Ex.: 1,2', required: true } });
   const campoCorteUnidade = criarElemento(
@@ -138,11 +159,17 @@ export function criarEditorEvento({ definicao, acoes }) {
     criarElemento('option', { texto: 'kg', atributos: { value: 'kg' } }),
     criarElemento('option', { texto: 'g', atributos: { value: 'g' } }),
   );
-  const sugestoes = criarElemento('datalist', { atributos: { id: 'cortes-sugeridos' } }, ...definicao.cortesSugeridos.map((nome) => criarElemento('option', { atributos: { value: nome } })));
+
+  const atualizarSugestoes = () => {
+    const tipo = definicao.carne.tipos.find(({ id }) => id === campoCorteTipo.value);
+    sugestoes.replaceChildren(...(tipo?.cortesSugeridos ?? []).map((nome) => criarElemento('option', { atributos: { value: nome } })));
+  };
+  campoCorteTipo.addEventListener('change', atualizarSugestoes);
 
   const formCorte = criarElemento(
     'form',
     { classe: 'space-y-3 p-3 pt-0', atributos: { autocomplete: 'off' } },
+    criarElemento('div', {}, rotuloCampo('Tipo de carne', 'corte-tipo'), campoCorteTipo),
     criarElemento('div', {}, rotuloCampo('Corte', 'corte-nome'), campoCorteNome),
     criarElemento('div', { classe: 'grid grid-cols-[1fr_auto] gap-3' }, criarElemento('div', {}, rotuloCampo('Peso', 'corte-peso'), campoCortePeso), criarElemento('div', {}, rotuloCampo('Unidade', 'corte-unidade'), campoCorteUnidade)),
     criarElemento('button', { classe: 'btn btn-tonal w-full', atributos: { type: 'submit' } }, icone('done'), 'Confirmar corte'),
@@ -150,81 +177,147 @@ export function criarEditorEvento({ definicao, acoes }) {
   formCorte.addEventListener('submit', (evento) => {
     evento.preventDefault();
     const peso = lerNumero(campoCortePeso.value);
-    if (!campoCorteNome.value.trim() || peso === null || peso <= 0) return;
-    acoes.adicionarCorte({ nome: campoCorteNome.value, gramas: Math.round(campoCorteUnidade.value === 'kg' ? peso * 1000 : peso) });
-    formCorte.reset();
+    if (!campoCorteTipo.value || !campoCorteNome.value.trim() || peso === null || peso <= 0) return;
+    acoes.adicionarCorte({ nome: campoCorteNome.value, categoria: campoCorteTipo.value, gramas: Math.round(campoCorteUnidade.value === 'kg' ? peso * 1000 : peso) });
+    campoCorteNome.value = '';
+    campoCortePeso.value = '';
     campoCorteNome.focus();
   });
+
+  const detalhesCorte = criarElemento(
+    'details',
+    { classe: 'rounded-md border border-outline-variant' },
+    criarElemento('summary', { classe: 'flex min-h-12 cursor-pointer items-center gap-2 px-3 text-label-lg text-primary' }, icone('add'), 'Adicionar corte que tenho em casa'),
+    formCorte,
+  );
 
   const blocoCortes = criarElemento(
     'section',
     { classe: 'card space-y-3 p-4' },
-    criarElemento('div', { classe: 'flex items-start justify-between gap-3' }, criarElemento('div', {}, criarElemento('h3', { classe: 'text-headline-sm', texto: 'Cortes que eu já tenho' }), criarElemento('p', { classe: 'text-body-sm text-on-surface-variant', texto: 'Carnes já garantidas na geladeira ou no freezer' })), cortesTotal),
+    criarElemento('div', { classe: 'flex items-start justify-between gap-3' }, criarElemento('div', {}, criarElemento('h3', { classe: 'text-headline-sm', texto: 'Carnes que eu já tenho' }), criarElemento('p', { classe: 'text-body-sm text-on-surface-variant', texto: 'Já garantidas na geladeira ou no freezer' })), cortesTotal),
     listaCortes,
-    criarElemento(
-      'details',
-      { classe: 'rounded-md border border-outline-variant' },
-      criarElemento('summary', { classe: 'flex min-h-12 cursor-pointer items-center gap-2 px-3 text-label-lg text-primary' }, icone('add'), 'Adicionar corte que tenho em casa'),
-      formCorte,
-    ),
+    detalhesCorte,
     sugestoes,
   );
 
-  /* ---------- Acompanhamentos e bebidas ---------- */
-  const linhasItens = new Map();
-  definicao.itens.forEach(({ id, nome, unidade, passo }) => {
-    const estado = criarElemento('span', { classe: 'badge-neutro' });
-    const botaoCasa = criarElemento('button', { atributos: { type: 'button' }, aoClicar: () => acoes.alternarEmCasa(id) });
-    const stepper = criarStepper({ valor: 0, minimo: 0, passo, compacto: true, rotulo: nome, aoMudar: (quantidade) => acoes.ajustarQuantidade(id, quantidade) });
-    const linha = criarElemento(
-      'li',
-      { classe: 'card space-y-2 p-3' },
-      criarElemento('div', { classe: 'flex items-center justify-between gap-2' }, criarElemento('div', { classe: 'min-w-0 space-y-1' }, criarElemento('p', { classe: 'truncate text-body-lg', texto: nome }), estado), botaoCasa),
-      criarElemento('div', { classe: 'flex items-center gap-2' }, stepper.elemento, criarElemento('span', { classe: 'text-label-lg text-on-surface-variant', texto: unidade })),
-    );
-    linhasItens.set(id, { linha, estado, botaoCasa, stepper });
+  /* ---------- Complementos: o usuário marca o que quer ---------- */
+  const cartoes = new Map();
+  const ingredientes = new Map();
+
+  definicao.complementos.forEach(({ id, nome, icone: nomeIcone, ingredientes: lista }) => {
+    const marcador = criarMarcador({ nomeIcone, titulo: nome, aoAlternar: () => acoes.alternarComplemento(id) });
+    const mostrarNome = lista.length > 1;
+
+    const linhas = lista.map(({ id: idIngrediente, nome: nomeIngrediente, unidade, passo }) => {
+      const estadoTexto = criarElemento('span', { classe: 'badge-neutro' });
+      const botaoCasa = criarElemento('button', { atributos: { type: 'button' }, aoClicar: () => acoes.alternarEmCasa(idIngrediente) });
+      const stepper = criarStepper({ valor: 0, minimo: 0, passo, compacto: true, rotulo: nomeIngrediente, aoMudar: (quantidade) => acoes.ajustarQuantidade(idIngrediente, quantidade) });
+      ingredientes.set(idIngrediente, { estadoTexto, botaoCasa, stepper, unidade });
+      const linha = criarElemento(
+        'li',
+        { classe: 'space-y-2' },
+        mostrarNome ? criarElemento('p', { classe: 'text-label-lg', texto: nomeIngrediente }) : null,
+        criarElemento('div', { classe: 'flex flex-wrap items-center gap-2' }, stepper.elemento, criarElemento('span', { classe: 'text-label-lg text-on-surface-variant', texto: unidade }), botaoCasa),
+        estadoTexto,
+      );
+      ingredientes.get(idIngrediente).linha = linha;
+      return linha;
+    });
+
+    const corpo = criarElemento('ul', { classe: 'space-y-4 border-t border-outline-variant p-4' }, ...linhas);
+    const cartao = criarElemento('li', { classe: 'card overflow-hidden' }, marcador.rotulo, corpo);
+    cartoes.set(id, { caixa: marcador.caixa, corpo });
   });
 
-  const itensTotal = criarElemento('span', { classe: 'text-body-sm text-on-surface-variant' });
-  const blocoItens = criarElemento(
-    'section',
-    { classe: 'space-y-3' },
-    criarElemento('div', { classe: 'flex items-baseline justify-between' }, criarElemento('h3', { classe: 'text-headline-sm', texto: 'Acompanhamentos e bebidas' }), itensTotal),
-    criarElemento('p', { classe: 'text-body-sm text-on-surface-variant', texto: 'Quantidades sugeridas pelo número de convidados. Ajuste como preferir.' }),
-    criarElemento('ul', { classe: 'space-y-3' }, ...[...linhasItens.values()].map(({ linha }) => linha)),
+  const grupos = [...new Set(definicao.complementos.map(({ grupo }) => grupo))];
+  const blocoComplementos = criarElemento(
+    'div',
+    { classe: 'space-y-6' },
+    ...grupos.map((grupo) =>
+      criarElemento(
+        'section',
+        { classe: 'space-y-3' },
+        criarElemento('h3', { classe: 'text-headline-sm', texto: grupo }),
+        criarElemento('ul', { classe: 'space-y-3' }, ...definicao.complementos.filter((complemento) => complemento.grupo === grupo).map(({ id }) => cartoes.get(id).caixa.closest('li'))),
+      ),
+    ),
+  );
+  const itensTotal = criarElemento('p', { classe: 'text-body-sm text-on-surface-variant', texto: 'Marque o que vai ter no seu churrasco: o app calcula as quantidades pelo número de convidados.' });
+
+  const elemento = criarElemento(
+    'div',
+    { classe: 'space-y-6' },
+    cabecalho,
+    blocoDados,
+    blocoDuracao,
+    blocoConvidados,
+    blocoTiposCarne,
+    blocoCarne,
+    avisoSemCarne,
+    cartaoCarne,
+    blocoCortes,
+    criarElemento('section', { classe: 'space-y-3' }, criarElemento('h3', { classe: 'text-headline-md', texto: 'Complementos' }), itensTotal, blocoComplementos),
   );
 
-  const elemento = criarElemento('div', { classe: 'space-y-6' }, cabecalho, blocoDados, blocoDuracao, blocoConvidados, blocoCarne, cartaoCarne, blocoCortes, blocoItens);
-
   /* ---------- Atualização ---------- */
-  function atualizarCortes(cortes, carne) {
-    cortesTotal.textContent = cortes.length > 0 ? `${formatarMedida(carne.tenho, 'g')} em casa` : '';
+  let chaveTiposCorte = '';
+
+  function atualizarTipo(tipo, evento) {
+    const { linha, resumo, progresso, situacao, campoCorte, blocoCorte, dica, nomePadrao } = linhasTipos.get(tipo.id);
+    linha.classList.toggle('hidden', !tipo.selecionado);
+    if (!tipo.selecionado) return;
+
+    resumo.textContent = `Tenho ${formatarMedida(tipo.tenho, 'g')} de ${formatarMedida(tipo.meta, 'g')}`;
+    progresso.style.width = `${tipo.meta > 0 ? Math.min(100, (tipo.tenho / tipo.meta) * 100) : 0}%`;
+    definirValor(campoCorte, evento.corteFaltante[tipo.id] ?? '');
+    blocoCorte.classList.toggle('hidden', tipo.faltam === 0);
+    dica.textContent = `Vai para a lista de compras: ${(evento.corteFaltante[tipo.id] ?? '').trim() || nomePadrao}, ${formatarMedida(tipo.faltam, 'g')}`;
+
+    const selo = (classe, nomeIcone, texto) => situacao.replaceChildren(criarElemento('span', { classe }, icone(nomeIcone, 'text-base'), texto));
+    if (tipo.meta === 0) selo('badge-neutro', 'group_add', 'Adicione convidados');
+    else if (tipo.faltam > 0) selo('badge-alerta', 'scale', `Faltam ${formatarMedida(tipo.faltam, 'g')}`);
+    else if (tipo.excesso > 0) selo('badge-bom', 'celebration', `Passou ${formatarMedida(tipo.excesso, 'g')}: churrasco farto!`);
+    else selo('badge-bom', 'check_circle', 'Meta atingida');
+  }
+
+  function atualizarCortes(evento, carne) {
+    const selecionados = carne.tipos.filter((tipo) => tipo.selecionado);
+    const chave = selecionados.map((tipo) => tipo.id).join('|');
+    if (chave !== chaveTiposCorte) {
+      chaveTiposCorte = chave;
+      const anterior = campoCorteTipo.value;
+      campoCorteTipo.replaceChildren(...selecionados.map((tipo) => criarElemento('option', { texto: tipo.rotulo, atributos: { value: tipo.id } })));
+      if (selecionados.some((tipo) => tipo.id === anterior)) campoCorteTipo.value = anterior;
+      atualizarSugestoes();
+    }
+    detalhesCorte.classList.toggle('hidden', selecionados.length === 0);
+
+    cortesTotal.textContent = evento.cortes.length > 0 ? `${formatarMedida(carne.tenho, 'g')} em casa` : '';
     listaCortes.replaceChildren(
-      ...cortes.map((corte) =>
-        criarElemento(
+      ...evento.cortes.map((corte) => {
+        const tipo = carne.tipos.find(({ id }) => id === corte.categoria);
+        const ativo = tipo?.selecionado;
+        return criarElemento(
           'li',
-          { classe: 'flex items-center justify-between gap-3 rounded-md bg-surface-container-low p-3' },
-          criarElemento('div', { classe: 'min-w-0' }, criarElemento('p', { classe: 'truncate text-body-md', texto: corte.nome }), criarElemento('p', { classe: 'text-body-sm text-on-surface-variant', texto: formatarMedida(corte.gramas, 'g') })),
+          { classe: `flex items-center justify-between gap-3 rounded-md bg-surface-container-low p-3 ${ativo ? '' : 'opacity-60'}` },
+          criarElemento(
+            'div',
+            { classe: 'min-w-0' },
+            criarElemento('p', { classe: 'truncate text-body-md', texto: corte.nome }),
+            criarElemento('p', { classe: 'text-body-sm text-on-surface-variant', texto: `${formatarMedida(corte.gramas, 'g')} · ${tipo?.rotulo ?? 'Carne'}${ativo ? '' : ' (não escolhido)'}` }),
+          ),
           criarElemento('button', { classe: 'btn btn-ghost size-12 min-h-0 p-0 text-error', atributos: { type: 'button', 'aria-label': `Remover ${corte.nome}` }, aoClicar: () => acoes.removerCorte(corte.id) }, icone('delete')),
-        ),
-      ),
+        );
+      }),
     );
   }
 
-  function atualizarSituacao({ meta, faltam, excesso }) {
-    const selo = (classe, nomeIcone, texto) => situacao.replaceChildren(criarElemento('span', { classe }, icone(nomeIcone, 'text-base'), texto));
-    if (meta === 0) selo('badge-neutro', 'group_add', 'Adicione convidados para calcular a carne');
-    else if (faltam > 0) selo('badge-alerta', 'scale', `Faltam ${formatarMedida(faltam, 'g')} de carne`);
-    else if (excesso > 0) selo('badge-bom', 'celebration', `Passou ${formatarMedida(excesso, 'g')} do sugerido: churrasco farto!`);
-    else selo('badge-bom', 'check_circle', 'Meta atingida: carne completa');
-  }
-
-  function atualizarItem({ id, quantidade, emCasa, unidade }) {
-    const { linha, estado, botaoCasa, stepper } = linhasItens.get(id);
+  function atualizarIngrediente({ id, quantidade, emCasa, unidade }) {
+    const { estadoTexto, botaoCasa, stepper, linha } = ingredientes.get(id);
     stepper.definir(quantidade);
     linha.classList.toggle('opacity-60', emCasa);
-    estado.textContent = emCasa ? 'Em casa' : `A comprar · ${formatarMedida(quantidade, unidade)}`;
-    estado.className = emCasa ? 'badge-bom' : 'badge-neutro';
+    estadoTexto.textContent = emCasa ? 'Em casa' : `A comprar · ${formatarMedida(quantidade, unidade)}`;
+    estadoTexto.className = emCasa ? 'badge-bom' : 'badge-neutro';
     botaoCasa.className = `btn min-h-10 px-3 ${emCasa ? 'btn-primary' : 'btn-tonal'}`;
     botaoCasa.setAttribute('aria-pressed', String(emCasa));
     botaoCasa.replaceChildren(icone(emCasa ? 'check_circle' : 'inventory_2'), 'Já tenho');
@@ -236,10 +329,10 @@ export function criarEditorEvento({ definicao, acoes }) {
     atualizar({ evento, calculo }) {
       const { carne } = calculo;
       const duracao = definicao.duracoes.find(({ valor }) => valor === evento.duracao);
+      const semCarne = carne.tipos.every((tipo) => !tipo.selecionado);
 
       definirValor(campoNome, evento.nome);
       definirValor(campoData, evento.data);
-      definirValor(campoCorteFaltante, evento.corteFaltante);
 
       botoesDuracao.forEach(({ valor, botao }) => {
         const ativo = valor === evento.duracao;
@@ -250,17 +343,26 @@ export function criarEditorEvento({ definicao, acoes }) {
       definicao.convidados.forEach(({ id }) => steppers.get(id).definir(evento.convidados[id]));
       total.textContent = `${calculo.cabecas} ${calculo.cabecas === 1 ? 'convidado' : 'convidados'}`;
 
+      chipsCarne.forEach(({ id, botao }) => {
+        const ativo = evento.carnes.includes(id);
+        botao.className = `chip min-h-11 gap-2 ${ativo ? `${CHIP_ATIVO} hover:text-on-primary` : ''}`.trim();
+        botao.setAttribute('aria-pressed', String(ativo));
+      });
+
+      blocoCarne.classList.toggle('hidden', semCarne);
+      avisoSemCarne.classList.toggle('hidden', !semCarne);
+      cartaoCarne.classList.toggle('hidden', semCarne);
       metaTexto.textContent = formatarMedida(carne.meta, 'g');
       publicoTexto.textContent = textoPublico(evento.convidados, duracao.rotulo);
-      progresso.style.width = `${carne.meta > 0 ? Math.min(100, (carne.tenho / carne.meta) * 100) : 0}%`;
-      progressoTexto.textContent = `Tenho ${formatarMedida(carne.tenho, 'g')} de ${formatarMedida(carne.meta, 'g')}`;
-      atualizarSituacao(carne);
-      blocoCorteFaltante.classList.toggle('hidden', carne.faltam === 0);
+      carne.tipos.forEach((tipo) => atualizarTipo(tipo, evento));
+      atualizarCortes(evento, carne);
 
-      atualizarCortes(evento.cortes, carne);
-      calculo.itens.forEach(atualizarItem);
-      const emCasa = calculo.itens.filter((item) => item.emCasa).length;
-      itensTotal.textContent = `${calculo.itens.length - emCasa} a comprar · ${emCasa} em casa`;
+      calculo.complementos.forEach((complemento) => {
+        const { caixa, corpo } = cartoes.get(complemento.id);
+        caixa.checked = complemento.selecionado;
+        corpo.classList.toggle('hidden', !complemento.selecionado);
+        complemento.ingredientes.forEach(atualizarIngrediente);
+      });
     },
   };
 }

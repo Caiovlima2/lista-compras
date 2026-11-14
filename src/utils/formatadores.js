@@ -53,9 +53,10 @@ export function formatarCronometro(milissegundos) {
 
 export const formatarMinutos = (milissegundos) => `${Math.max(1, Math.round(milissegundos / 60000))} min`;
 
-/** 700 + "g" -> "700 g"; 1500 + "g" -> "1,5 kg". */
+/** 700 + "g" -> "700 g"; 1500 + "g" -> "1,5 kg"; 1500 + "ml" -> "1,5 L". */
 export function formatarMedida(valor, unidade) {
   if (unidade === 'g' && valor >= 1000) return `${numero.format(valor / 1000)} kg`;
+  if (unidade === 'ml' && valor >= 1000) return `${numero.format(valor / 1000)} L`;
   return `${numero.format(valor)} ${unidade}`;
 }
 

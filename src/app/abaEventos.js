@@ -1,44 +1,39 @@
-import { calcularEvento } from '../domain/eventos/calculadora.js';
-import {
-  adicionarCorte,
-  ajustarItem,
-  alterarConfiguracao,
-  criarEvento,
-  obterDefinicao,
-  removerCorte,
-} from '../domain/eventos/evento.js';
-import { listarItensDoEvento } from '../domain/eventos/paraLista.js';
+import { criarEventoDoTipo } from '../domain/eventos/tipos.js';
 import { criarItensDeOrigem } from '../domain/item.js';
 import { separarRepetidos } from '../domain/lista.js';
+import { TIPO_MARMITAS } from '../domain/marmitas/marmitas.js';
 import { criarElemento, icone } from '../utils/dom.js';
 
 import { renderizarListaEventos } from '../components/eventos/listaEventos.js';
-import { criarEditorEvento } from '../components/eventos/editorEvento.js';
 import { mostrarToast } from '../components/toast.js';
 
 import { aplicarComDesfazer } from './desfazer.js';
+import { montarChurrasco } from './eventos/churrascoUI.js';
+import { montarMarmitas } from './eventos/marmitasUI.js';
 import { aoAtualizar, atualizarEstado, estado } from './store.js';
 
 const $ = (seletor) => document.querySelector(seletor);
 
+/** Cada tipo de evento tem um "montar" que devolve { elemento, atualizar(evento) -> { itens, emCasa } }. */
+const MONTADORES = { churrasco: montarChurrasco, [TIPO_MARMITAS]: montarMarmitas };
+
 const eventoAberto = () => estado.eventos.find((evento) => evento.id === estado.eventoAberto) ?? null;
 
-/** Aba Eventos: lista de eventos e, ao abrir um, o editor com a calculadora. */
+/** Aba Eventos: lista de eventos e, ao abrir um, o editor do tipo dele. */
 export function iniciarAbaEventos() {
   const raiz = $('#aba-eventos');
   const barra = $('#barra-evento');
 
   let editor = null;
   let idDoEditor = null;
+  let itensParaLista = [];
 
   /* ---------- Ações ---------- */
-  const trocarEvento = (id, mudar) =>
-    atualizarEstado({ eventos: estado.eventos.map((evento) => (evento.id === id ? mudar(evento) : evento)) });
-
-  const alterarAberto = (mudar) => trocarEvento(estado.eventoAberto, mudar);
+  const alterarAberto = (mudar) =>
+    atualizarEstado({ eventos: estado.eventos.map((evento) => (evento.id === estado.eventoAberto ? mudar(evento) : evento)) });
 
   function criar(tipo) {
-    const evento = criarEvento(tipo);
+    const evento = criarEventoDoTipo(tipo);
     atualizarEstado({ eventos: [...estado.eventos, evento], eventoAberto: evento.id });
     window.scrollTo(0, 0);
   }
@@ -53,8 +48,7 @@ export function iniciarAbaEventos() {
 
   function enviarParaLista() {
     const evento = eventoAberto();
-    const calculo = calcularEvento(evento, obterDefinicao(evento.tipo));
-    const novos = criarItensDeOrigem(listarItensDoEvento(calculo, evento), { tipo: evento.tipo, nome: evento.nome });
+    const novos = criarItensDeOrigem(itensParaLista, { tipo: evento.tipo, nome: evento.nome });
 
     // Quem já está na lista (mesmo nome e marca) não é duplicado.
     const { aAdicionar, repetidos } = separarRepetidos(estado.itens, novos);
@@ -69,21 +63,6 @@ export function iniciarAbaEventos() {
       planejando: true,
     });
   }
-
-  const acoesDoEditor = {
-    voltar: () => atualizarEstado({ eventoAberto: null }),
-    excluir: excluirAberto,
-    renomear: (nome) => alterarAberto((evento) => ({ ...evento, nome })),
-    alterarData: (data) => alterarAberto((evento) => ({ ...evento, data })),
-    alterarCorteFaltante: (corteFaltante) => alterarAberto((evento) => ({ ...evento, corteFaltante })),
-    alterarDuracao: (duracao) => alterarAberto((evento) => alterarConfiguracao(evento, { duracao })),
-    alterarConvidado: (id, quantidade) =>
-      alterarAberto((evento) => alterarConfiguracao(evento, { convidados: { ...evento.convidados, [id]: quantidade } })),
-    adicionarCorte: (corte) => alterarAberto((evento) => adicionarCorte(evento, corte)),
-    removerCorte: (id) => alterarAberto((evento) => removerCorte(evento, id)),
-    ajustarQuantidade: (id, quantidade) => alterarAberto((evento) => ajustarItem(evento, id, { quantidade })),
-    alternarEmCasa: (id) => alterarAberto((evento) => ajustarItem(evento, id, { emCasa: !evento.ajustes[id]?.emCasa })),
-  };
 
   /* ---------- Barra fixa com o botão "Adicionar à lista" ---------- */
   function renderizarBarra(quantidade, emCasa) {
@@ -116,20 +95,19 @@ export function iniciarAbaEventos() {
       editor = null;
       idDoEditor = null;
       barra.style.display = 'none';
-      renderizarListaEventos(raiz, { eventos: estado.eventos, aoCriar: criar, aoAbrir: (id) => atualizarEstado({ eventoAberto: id }) });
+      renderizarListaEventos(raiz, { eventos: estado.eventos, receitas: estado.receitas, aoCriar: criar, aoAbrir: (id) => atualizarEstado({ eventoAberto: id }) });
       return;
     }
 
-    const definicao = obterDefinicao(aberto.tipo);
     if (idDoEditor !== aberto.id) {
-      editor = criarEditorEvento({ definicao, acoes: acoesDoEditor });
+      editor = MONTADORES[aberto.tipo]({ evento: aberto, alterar: alterarAberto, voltar: () => atualizarEstado({ eventoAberto: null }), excluir: excluirAberto });
       idDoEditor = aberto.id;
       raiz.replaceChildren(editor.elemento);
     }
 
-    const calculo = calcularEvento(aberto, definicao);
-    editor.atualizar({ evento: aberto, calculo });
-    renderizarBarra(listarItensDoEvento(calculo, aberto).length, calculo.itens.filter((item) => item.emCasa).length);
+    const { itens, emCasa } = editor.atualizar(aberto);
+    itensParaLista = itens;
+    renderizarBarra(itens.length, emCasa);
   }
 
   aoAtualizar(renderizar);

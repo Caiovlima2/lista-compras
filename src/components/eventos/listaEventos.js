@@ -1,22 +1,10 @@
 import { criarElemento, icone } from '../../utils/dom.js';
-import { formatarDataEvento, formatarMedida } from '../../utils/formatadores.js';
-import { calcularEvento } from '../../domain/eventos/calculadora.js';
-import { obterDefinicao } from '../../domain/eventos/evento.js';
+import { formatarDataEvento } from '../../utils/formatadores.js';
+import { TIPOS_DE_EVENTO, obterTipoDeEvento, resumirEvento } from '../../domain/eventos/tipos.js';
 
-const textoConvidados = (convidados) => {
-  const total = Object.values(convidados).reduce((soma, quantidade) => soma + quantidade, 0);
-  return `${total} ${total === 1 ? 'pessoa' : 'pessoas'}`;
-};
-
-function textoCarne({ meta, faltam }) {
-  if (meta === 0) return 'Defina os convidados';
-  return faltam === 0 ? 'Carne completa' : `Faltam ${formatarMedida(faltam, 'g')} de carne`;
-}
-
-function criarCartaoEvento(evento, { aoAbrir }) {
-  const definicao = obterDefinicao(evento.tipo);
-  const { carne } = calcularEvento(evento, definicao);
-  const completa = carne.meta > 0 && carne.faltam === 0;
+function criarCartaoEvento(evento, receitas, aoAbrir) {
+  const tipo = obterTipoDeEvento(evento.tipo);
+  const { detalhe, selo } = resumirEvento(evento, receitas);
 
   return criarElemento(
     'li',
@@ -24,45 +12,54 @@ function criarCartaoEvento(evento, { aoAbrir }) {
     criarElemento(
       'button',
       { classe: 'card flex w-full cursor-pointer items-center gap-3 p-4 text-left transition hover:border-primary', atributos: { type: 'button', 'aria-label': `Abrir ${evento.nome}` }, aoClicar: () => aoAbrir(evento.id) },
-      criarElemento('span', { classe: 'grid size-12 shrink-0 place-items-center rounded-xl bg-primary-fixed text-on-primary-fixed' }, icone(definicao.icone)),
+      criarElemento('span', { classe: 'grid size-12 shrink-0 place-items-center rounded-xl bg-primary-fixed text-on-primary-fixed' }, icone(tipo.icone)),
       criarElemento(
         'span',
         { classe: 'min-w-0 flex-1 space-y-1' },
         criarElemento('span', { classe: 'block truncate text-body-lg', texto: evento.nome }),
-        criarElemento(
-          'span',
-          { classe: 'block text-body-sm text-on-surface-variant', texto: [definicao.rotulo, evento.data ? formatarDataEvento(evento.data) : null, textoConvidados(evento.convidados)].filter(Boolean).join(' · ') },
-        ),
-        criarElemento('span', { classe: completa ? 'badge-bom' : 'badge-alerta' }, icone(completa ? 'check_circle' : 'scale', 'text-sm'), textoCarne(carne)),
+        criarElemento('span', { classe: 'block text-body-sm text-on-surface-variant', texto: [tipo.rotulo, evento.data ? formatarDataEvento(evento.data) : null, detalhe].filter(Boolean).join(' · ') }),
+        selo ? criarElemento('span', { classe: selo.ok ? 'badge-bom' : 'badge-alerta' }, icone(selo.ok ? 'check_circle' : 'scale', 'text-sm'), selo.texto) : null,
       ),
       icone('chevron_right', 'text-outline'),
     ),
   );
 }
 
-/** Tela inicial da aba: botão de novo evento e a lista de eventos salvos. */
-export function renderizarListaEventos(container, { eventos, aoCriar, aoAbrir }) {
-  const definicao = obterDefinicao('churrasco');
+const criarBotaoDeTipo = ({ tipo, rotulo, icone: nomeIcone, descricao }, aoCriar) =>
+  criarElemento(
+    'button',
+    { classe: 'card flex w-full cursor-pointer items-center gap-3 p-4 text-left transition hover:border-primary', atributos: { type: 'button', 'aria-label': `Criar ${rotulo}` }, aoClicar: () => aoCriar(tipo) },
+    criarElemento('span', { classe: 'grid size-12 shrink-0 place-items-center rounded-xl bg-primary text-on-primary' }, icone(nomeIcone)),
+    criarElemento('span', { classe: 'min-w-0 flex-1' }, criarElemento('span', { classe: 'block text-body-lg', texto: rotulo }), criarElemento('span', { classe: 'block text-body-sm text-on-surface-variant', texto: descricao })),
+    icone('add', 'text-primary'),
+  );
 
+/** Tela inicial da aba: criar um evento de cada tipo e a lista de eventos salvos. */
+export function renderizarListaEventos(container, { eventos, receitas, aoCriar, aoAbrir }) {
   container.replaceChildren(
     criarElemento(
       'div',
-      { classe: 'space-y-4' },
+      { classe: 'space-y-6' },
       criarElemento(
-        'div',
-        { classe: 'flex items-center justify-between gap-3' },
-        criarElemento('h2', { classe: 'text-headline-md', texto: 'Eventos' }),
-        criarElemento('button', { classe: 'btn btn-primary min-h-10 px-4', atributos: { type: 'button' }, aoClicar: () => aoCriar(definicao.tipo) }, icone('add'), `Novo ${definicao.rotulo.toLowerCase()}`),
+        'section',
+        { classe: 'space-y-3' },
+        criarElemento('h2', { classe: 'text-headline-md', texto: 'Novo evento' }),
+        criarElemento('div', { classe: 'grid gap-3 sm:grid-cols-2' }, ...TIPOS_DE_EVENTO.map((tipo) => criarBotaoDeTipo(tipo, aoCriar))),
       ),
-      eventos.length === 0
-        ? criarElemento(
-            'div',
-            { classe: 'card space-y-2 p-8 text-center' },
-            icone('celebration', 'text-5xl text-primary'),
-            criarElemento('p', { classe: 'text-body-lg', texto: 'Nenhum evento planejado ainda.' }),
-            criarElemento('p', { classe: 'text-body-md text-on-surface-variant', texto: 'Crie um churrasco: o app calcula a carne e os acompanhamentos e manda o que falta para a sua lista de compras.' }),
-          )
-        : criarElemento('ul', { classe: 'space-y-3' }, ...eventos.map((evento) => criarCartaoEvento(evento, { aoAbrir }))),
+      criarElemento(
+        'section',
+        { classe: 'space-y-3' },
+        criarElemento('h2', { classe: 'text-headline-md', texto: 'Seus eventos' }),
+        eventos.length === 0
+          ? criarElemento(
+              'div',
+              { classe: 'card space-y-2 p-8 text-center' },
+              icone('celebration', 'text-5xl text-primary'),
+              criarElemento('p', { classe: 'text-body-lg', texto: 'Nenhum evento planejado ainda.' }),
+              criarElemento('p', { classe: 'text-body-md text-on-surface-variant', texto: 'Crie um churrasco ou monte as marmitas da semana: o app calcula e manda o que falta para a sua lista de compras.' }),
+            )
+          : criarElemento('ul', { classe: 'space-y-3' }, ...eventos.map((evento) => criarCartaoEvento(evento, receitas, aoAbrir))),
+      ),
     ),
   );
 }
